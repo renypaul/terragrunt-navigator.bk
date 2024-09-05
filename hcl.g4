@@ -62,13 +62,8 @@ expression
     | conditional
     ;
 
-// TODO: Add support for nested conditional
-conditional
-    :  (exprTerm | operation) QUESTION expression COLON expression
-    ;
-
 exprTerm
-    : literalValue
+    : literals
     | collectionValue
     | templateExpr
     | variableExpr
@@ -80,11 +75,19 @@ exprTerm
     | LPAREN expression RPAREN
     ;
 
-literalValue
+literals
+    : basicLiterals
+    | stringLiterals
+    ;
+
+basicLiterals
     : NUMBER
     | boolean_
     | NULL
-    | getAttrIdent
+    ;
+
+stringLiterals
+    : getAttrIdent
     | interpolatedString
     | STRING_LITERAL
     ;
@@ -104,39 +107,6 @@ object_
 
 objectElement
     : (IDENTIFIER | expression) (ASSIGN | COLON) expression
-    ;
-
-templateExpr
-    : DOLLAR_LCURL expression RCURL
-    ;
-
-functionCall
-    : IDENTIFIER LPAREN functionArgs RPAREN
-    ;
-
-functionArgs
-    : (expression (COMMA expression)* (COMMA | ELLIPSIS)?)?
-    ;
-
-forExpr
-    : forTupleExpr
-    | forObjectExpr
-    ;
-
-forObjectExpr
-    : LCURL forIntro expression '=>' expression forCond? RCURL
-    ;
-
-forTupleExpr
-    : LBRACK forIntro expression forCond? RBRACK
-    ;
-
-forIntro
-    : 'for' IDENTIFIER (COMMA IDENTIFIER)? 'in' expression ':'
-    ;
-
-forCond
-    : 'if' expression
     ;
 
 index
@@ -205,8 +175,46 @@ boolean_
     | FALSE
     ;
 
+// TODO: Add support for nested conditional
+conditional
+    :  (exprTerm | operation) QUESTION expression COLON expression
+    ;
+
+templateExpr
+    : DOLLAR_LCURL expression RCURL
+    ;
+
 variableExpr
     : IDENTIFIER
+    ;
+
+functionCall
+    : IDENTIFIER LPAREN functionArgs RPAREN
+    ;
+
+functionArgs
+    : (expression (COMMA expression)* (COMMA | ELLIPSIS)?)?
+    ;
+
+forExpr
+    : forTupleExpr
+    | forObjectExpr
+    ;
+
+forObjectExpr
+    : LCURL forIntro expression '=>' expression forCond? RCURL
+    ;
+
+forTupleExpr
+    : LBRACK forIntro expression forCond? RBRACK
+    ;
+
+forIntro
+    : 'for' IDENTIFIER (COMMA IDENTIFIER)? 'in' expression ':'
+    ;
+
+forCond
+    : 'if' expression
     ;
 
 KNOWN_GETATTR
@@ -218,7 +226,7 @@ GENERIC_GETATTR
     ;
 
 IDENTIFIER
-    : [a-zA-Z_-][a-zA-Z_0-9-]*
+    : [a-zA-Z_][a-zA-Z_0-9-]*
     ;
 
 NUMBER
