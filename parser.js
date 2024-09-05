@@ -105,6 +105,7 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
       configs[ident] = identInfo.evalNeeded
         ? evalExpression(configs[ident], tfInfo.configs)
         : configs[ident];
+      ranges[ident] = identInfo.range;
     } else if (ruleName === "object_") {
       let mapConfigs = configs;
       let mapRanges = ranges;
