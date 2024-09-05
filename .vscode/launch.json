@@ -33,7 +33,7 @@
     //   "name": "Debug ANTLR4 grammar",
     //   "type": "antlr-debug",
     //   "request": "launch",
-    //   "input": "/tmp/variable.tf",
+    //   "input": "/root/op.hcl",
     //   "grammar": "${workspaceFolder}/hcl.g4",
     //   "startRule": "configFile",
     //   "printParseTree": true,

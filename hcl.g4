@@ -76,7 +76,6 @@ exprTerm
     | forExpr
     | exprTerm index
 //    | exprTerm getAttr
-    | GETATTR_IDENT
     | exprTerm splat
     | LPAREN expression RPAREN
     ;
@@ -85,9 +84,9 @@ literalValue
     : NUMBER
     | boolean_
     | NULL
-    | STRING_LITERAL
-    | getAttrIdent // Workaround
+    | getAttrIdent
     | interpolatedString
+    | STRING_LITERAL
     ;
 
 collectionValue
@@ -145,7 +144,7 @@ fullSplat
     ;
 
 getAttrIdent
-    : GETATTR_IDENT
+    : ('local'|'var'|'dependency'|'module') DOT IDENTIFIER
     ;
 
 interpolatedString
@@ -212,20 +211,16 @@ IDENTIFIER
     : [a-zA-Z_-][a-zA-Z_0-9-]*
     ;
 
-GETATTR_IDENT
-    : [a-zA-Z_][a-zA-Z_0-9-.]*
-    ;
-
 NUMBER
     : DECIMAL+ (DOT DECIMAL+)? (EXPMARK DECIMAL+)?
     ;
 
-STRING_LITERAL
-    : (QUOTE ~[\r\n]*? QUOTE)
+INTERPOLATED_STRING
+    : (QUOTE ~[\r\n]*? (DOLLAR_LCURL ~[\r\n]*? RCURL) QUOTE)
     ;
 
-INTERPOLATED_STRING
-    : (QUOTE ~[\r\n]* (DOLLAR_LCURL ~[\r\n]*? RCURL) QUOTE)
+STRING_LITERAL
+    : (QUOTE ~[\r\n]*? QUOTE)
     ;
 
 fragment DECIMAL

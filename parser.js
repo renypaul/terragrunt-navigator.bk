@@ -33,6 +33,7 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
       let blockType = firstChild.getText();
       const identInfo = {
         name: blockType,
+        evalNeeded: false,
         range: {
           __range: {
             sl: child.start.line - 1,
@@ -89,7 +90,7 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
       const identInfo = {
         name: name,
         value: [],
-        runEval: false,
+        evalNeeded: false,
         range: {
           __range: {
             sl: line - 1,
@@ -100,6 +101,10 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
         },
       };
       traverse(tfInfo, parser, child, configs, ranges, identInfo);
+      ident = identInfo.name;
+      configs[ident] = identInfo.evalNeeded
+        ? evalExpression(configs[ident], tfInfo.configs)
+        : configs[ident];
     } else if (ruleName === "object_") {
       let mapConfigs = configs;
       let mapRanges = ranges;
@@ -116,21 +121,20 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
       traverse(tfInfo, parser, child, configs, ranges, identInfo);
     } else if (ruleName === "expression") {
       traverse(tfInfo, parser, child, configs, ranges, identInfo);
-      let val = evalExpression(configs[ident], tfInfo.configs);
-      configs[ident] = val;
-      ranges[ident] = identInfo.range;
     } else if (ruleName === "unaryOperator") {
       let value = child.getText();
       if (value && ident) {
         configs[ident] = configs[ident] ? configs[ident] + value : value;
       }
       traverse(tfInfo, parser, child, configs, ranges, identInfo);
+      identInfo.evalNeeded = true;
     } else if (ruleName === "binaryOperator") {
       let value = child.getText();
       if (value && ident) {
         configs[ident] = configs[ident] ? configs[ident] + value : value;
       }
       traverse(tfInfo, parser, child, configs, ranges, identInfo);
+      identInfo.evalNeeded = true;
     } else if (ruleName === "conditional") {
       let calc = {};
       identInfo.calc = calc;
@@ -138,14 +142,27 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
       configs[ident] = calc["value"][0] ? calc["value"][1] : calc["value"][2];
     } else if (
       ruleName === "literalValue" ||
-      ruleName == "variableExpr" ||
+      ruleName === "variableExpr" ||
       ruleName === "functionCall"
     ) {
       let value = child.getText();
       let val = value;
+      let evalNeeded = ruleName === "functionCall";
+      if (child.children && child.children.length > 0) {
+        childRuleName = parser.ruleNames[child.children[0].ruleIndex];
+        if (
+          childRuleName === "getAttrIdent" ||
+          childRuleName === "interpolatedString"
+        ) {
+          evalNeeded = true;
+        }
+      }
+
       if (value && ident) {
-        console.log(ruleName + " -> " + value);
-        val = evalExpression(value, tfInfo.configs);
+        //console.log(ruleName + " -> " + value + ". EvalNeeded: " + evalNeeded);
+        val = evalNeeded
+          ? evalExpression(value, tfInfo.configs)
+          : processString(value);
         if (identInfo.calc && identInfo.calc["value"]) {
           identInfo.calc["value"].push(val);
         } else {
@@ -445,22 +462,21 @@ function path_relative_from_include(
   return relativePath;
 }
 
-function evalExpression(exp, configs, forceEval = false) {
+function evalExpression(exp, configs) {
   let value = exp;
 
-  if (needEval(value) || forceEval) {
-    let matches = value.match(/\$\{([^}]+)\}/g);
-    if (matches) {
-      for (let i = 0; i < matches.length; i++) {
-        let match = matches[i];
-        let key = match.substring(2, match.length - 1);
-        let val = runEval(key, configs);
-        value = value.replace(match, val);
-      }
-    } else {
-      value = runEval(value, configs);
+  let matches = value.match(/\$\{([^}]+)\}/g);
+  if (matches) {
+    for (let i = 0; i < matches.length; i++) {
+      let match = matches[i];
+      let key = match.substring(2, match.length - 1);
+      let val = runEval(key, configs);
+      value = value.replace(match, val);
     }
+  } else {
+    value = runEval(value, configs);
   }
+
   if (typeof value === "string") {
     value = processString(value);
   }
@@ -484,9 +500,10 @@ function runEval(exp, configs) {
       }
     }
     let path = { module: globalTfInfo.startDir };
+    //console.log("Evaluating expression: " + exp);
     value = eval(exp);
   } catch (e) {
-    console.log(e);
+    console.log("Failed to evaluate expression: " + exp + " Error: " + e);
   }
   return value;
 }
