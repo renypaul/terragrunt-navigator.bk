@@ -108,13 +108,20 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
     } else if (ruleName === "object_") {
       let mapConfigs = configs;
       let mapRanges = ranges;
-      configs[ident] = {};
-      ranges[ident] = {};
-      configs = configs[ident];
-      ranges = identInfo.range;
-      traverse(tfInfo, parser, child, configs, ranges, identInfo);
-      configs = mapConfigs;
-      ranges = mapRanges;
+      if (Array.isArray(configs[ident])) {
+        let obj = {};
+        let objRanges = {};
+        traverse(tfInfo, parser, child, obj, objRanges, identInfo);
+        configs[ident].push(obj);
+      } else {
+        configs[ident] = {};
+        ranges[ident] = {};
+        configs = configs[ident];
+        ranges = identInfo.range;
+        traverse(tfInfo, parser, child, configs, ranges, identInfo);
+        configs = mapConfigs;
+        ranges = mapRanges;
+      }
     } else if (ruleName === "tuple_") {
       configs[ident] = [];
       ranges[ident] = identInfo.range;
@@ -174,6 +181,78 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
           }
           ranges[ident] = identInfo.range;
         }
+      }
+    } else if (ruleName === "forTupleExpr") {
+      try {
+        let forRule = child.children[1].children.map((child) =>
+          child.getText(),
+        );
+        let key = forRule[1];
+        let list = evalExpression(forRule[3], tfInfo.configs);
+        let valueExp = child.children[2]
+          .getText()
+          .replace(key, "configs." + key);
+        let condition = null;
+        if (child.children.length > 4) {
+          condition = child.children[3].children[1]
+            .getText()
+            .replace(key, "configs." + key);
+        }
+        let result = [];
+
+        list.forEach((item) => {
+          let configs = {};
+          configs[key] = item;
+          let conditionValue =
+            condition != null ? evalExpression(condition, configs) : true;
+          if (conditionValue) {
+            result.push(evalExpression(valueExp, configs));
+          }
+        });
+
+        configs[ident] = result;
+        ranges[ident] = identInfo.range;
+      } catch (e) {
+        console.log("Error in forTupleExpr: " + e);
+      }
+    } else if (ruleName === "forObjectExpr") {
+      try {
+        let forRule = child.children[1].children.map((child) =>
+          child.getText(),
+        );
+        let key = forRule[1];
+        let list = evalExpression(forRule[3], tfInfo.configs);
+        let keyExp = child.children[2].getText().replace(key, "configs." + key);
+        let valueExp = child.children[4]
+          .getText()
+          .replace(key, "configs." + key);
+        let condition = null;
+        if (child.children.length > 5) {
+          condition = child.children[5].children[1]
+            .getText()
+            .replace(key, "configs." + key);
+        }
+        let result = {};
+
+        list.forEach((item) => {
+          let configs = {};
+          configs[key] = item;
+          conditionValue =
+            condition != null
+              ? evalExpression(condition, configs) == "true"
+              : true;
+          if (conditionValue) {
+            result[evalExpression(keyExp, configs)] = evalExpression(
+              valueExp,
+              configs,
+            );
+          }
+        });
+
+        configs[ident] = result;
+        ranges[ident] = identInfo.range;
+      } catch (e) {
+        console.log("Error in forObjectExpr: " + e);
       }
     } else if (child.children) {
       traverse(tfInfo, parser, child, configs, ranges, identInfo);
@@ -508,34 +587,12 @@ function runEval(exp, configs) {
   return value;
 }
 
-function needEval(value) {
-  if (skipEval) {
-    return false;
-  }
-  if (typeof value === "string") {
-    // Avoid evaluating following string without interpolation ${}
-    // single word string with no special characters
-    // string with only numbers with/without decimal
-    if (
-      value.match(/^[a-zA-Z0-9_]+$/) ||
-      (value.match(/^[0-9.]+$/) && !value.match(/\${/))
-    ) {
-      return false;
-    }
-    if (value.match(/[\{\}\[\]\(\)\.+\-*!%<>/]|\${|<=|>=|==|!=|&&|\|\|/)) {
-      return true;
-    }
-  }
-  return false;
-}
-
 function processString(value) {
   if (typeof value === "string") {
     value = value.replace(/"/g, "");
     if (value.startsWith("./") || value.startsWith("../")) {
       value = path.resolve(globalTfInfo.startDir, value);
     }
-    //value = runEval(value, configs);
   }
   return value;
 }

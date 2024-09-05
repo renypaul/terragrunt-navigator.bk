@@ -18,8 +18,8 @@ LESS_EQUAL: '<=';
 GREATER_EQUAL: '>=';
 QUESTION: '?';
 COLON: ':';
-ASSIGN: '=';
 ARROW: '=>';
+ASSIGN: '=';
 LCURL: '{';
 RCURL: '}';
 LBRACK: '[';
@@ -76,7 +76,7 @@ exprTerm
     | forExpr
     | exprTerm index
 //    | exprTerm getAttr
-    | exprTerm splat
+//    | exprTerm splat
     | LPAREN expression RPAREN
     ;
 
@@ -119,32 +119,34 @@ functionArgs
     ;
 
 forExpr
-    : 'for' IDENTIFIER 'in' expression COLON expression ('if' expression)?
+    : forTupleExpr
+    | forObjectExpr
+    ;
+
+forObjectExpr
+    : LCURL forIntro expression '=>' expression forCond? RCURL
+    ;
+
+forTupleExpr
+    : LBRACK forIntro expression forCond? RBRACK
+    ;
+
+forIntro
+    : 'for' IDENTIFIER (COMMA IDENTIFIER)? 'in' expression ':'
+    ;
+
+forCond
+    : 'if' expression
     ;
 
 index
     : LBRACK expression RBRACK
     ;
 
-getAttr
-    : DOT IDENTIFIER
-    ;
-
-splat
-    : attrSplat
-    | fullSplat
-    ;
-
-attrSplat
-    : DOT STAR getAttr*
-    ;
-
-fullSplat
-    : LBRACK STAR RBRACK (getAttr | index)*
-    ;
 
 getAttrIdent
-    : ('local'|'var'|'dependency'|'module') DOT IDENTIFIER
+    : KNOWN_GETATTR
+    | GENERIC_GETATTR
     ;
 
 interpolatedString
@@ -205,6 +207,14 @@ boolean_
 
 variableExpr
     : IDENTIFIER
+    ;
+
+KNOWN_GETATTR
+    : ('local'|'var'|'dependency'|'module') (DOT IDENTIFIER)+
+    ;
+
+GENERIC_GETATTR
+    : IDENTIFIER (DOT IDENTIFIER)+
     ;
 
 IDENTIFIER
