@@ -1,0 +1,44 @@
+{
+  "configurations": [
+    // {
+    //   "args": [
+    //     "--extensionDevelopmentPath=${workspaceFolder}"
+    //   ],
+    //   "env": {
+    //     "NODE_ENV": "debug"
+    //   },
+    //   "name": "Run Extension",
+    //   "outFiles": [
+    //     "${workspaceFolder}/extension.js"
+    //   ],
+    //   "request": "launch",
+    //   "runtimeExecutable": "${execPath}",
+    //   "type": "extensionHost"
+    // }
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Launch Program",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "program": "${workspaceFolder}/parser.js",
+      "args": [
+        //"tests/env/vpc/main.tf"
+        "/root/op.hcl"
+        //"/root/workspace/tf-cluster-dev/cluster-dev/us-west-2/region.hcl"
+      ]
+    }
+    // {
+    //   "name": "Debug ANTLR4 grammar",
+    //   "type": "antlr-debug",
+    //   "request": "launch",
+    //   "input": "/tmp/variable.tf",
+    //   "grammar": "${workspaceFolder}/hcl.g4",
+    //   "startRule": "configFile",
+    //   "printParseTree": true,
+    //   "visualParseTree": true
+    // }
+  ],
+  "version": "0.2.0"
+}
