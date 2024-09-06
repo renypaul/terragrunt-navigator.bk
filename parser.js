@@ -6,7 +6,6 @@ const path = require('path');
 const crypto = require('crypto');
 
 let globalTfInfo = {};
-let skipEval = false;
 
 function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
     if (!node || !node.children || typeof node.children !== 'object') {
@@ -16,12 +15,8 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
     let ident = identInfo ? identInfo.name : null;
     for (let i = 0; i < node.children.length; i++) {
         const child = node.children[i];
-        if ((!child) instanceof antlr4.ParserRuleContext) {
-            continue;
-        }
-
         let ruleName = parser.ruleNames[child.ruleIndex];
-        if (ruleName === undefined && child.getText()) {
+        if (ruleName === undefined) {
             continue;
         } else {
             //console.debug(ruleName + " -> " + child.getText());
@@ -71,8 +66,6 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
                 configs = configs[label];
                 ranges = ranges[label];
             }
-
-            skipEval = blockType === 'variable' ? true : false;
 
             traverse(tfInfo, parser, child, configs, ranges, identInfo);
             ranges['__range'] = identInfo.range.__range;
@@ -155,15 +148,15 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             if (value && ident) {
                 //console.log(ruleName + " -> " + value + ". EvalNeeded: " + evalNeeded);
                 val = evalNeeded ? evalExpression(value, tfInfo.configs) : value;
-                if (ruleName === 'stringLiterals') {
-                    val = '"' + val + '"';
-                }
                 if (identInfo.calc && identInfo.calc['value']) {
                     identInfo.calc['value'].push(val);
                 } else {
                     if (Array.isArray(configs[ident])) {
                         configs[ident].push(val);
                     } else {
+                        if (ruleName === 'stringLiterals') {
+                            val = '"' + val + '"';
+                        }
                         val = configs[ident] ? configs[ident] + val : val;
                         configs[ident] = val;
                     }
@@ -212,7 +205,7 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
                 list.forEach((item) => {
                     let configs = {};
                     configs[key] = item;
-                    conditionValue = condition != null ? evalExpression(condition, configs) == 'true' : true;
+                    conditionValue = condition != null ? evalExpression(condition, configs) : true;
                     if (conditionValue) {
                         result[evalExpression(keyExp, configs)] = evalExpression(valueExp, configs);
                     }
@@ -549,6 +542,10 @@ function runEval(exp, configs) {
         let path = { module: globalTfInfo.startDir };
         //console.log("Evaluating expression: " + exp);
         value = eval(exp);
+        // convert boolean string to boolean
+        if (typeof value === 'string' && (value === 'true' || value === 'false')) {
+            value = value === 'true';
+        }
     } catch (e) {
         console.log('Failed to evaluate expression: ' + exp + ' Error: ' + e);
     }
