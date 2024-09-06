@@ -25,8 +25,8 @@
       "program": "${workspaceFolder}/parser.js",
       "args": [
         //"tests/env/vpc/main.tf"
-        //"/root/op.hcl"
-        "/tmp/test.hcl"
+        "/root/op.hcl"
+        //"/tmp/test.hcl"
       ]
     }
     // {

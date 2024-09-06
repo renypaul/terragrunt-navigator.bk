@@ -1,3 +1,3 @@
 locals {
-    version = "v20.24.0"
+  version = "v20.24.0"
 }

@@ -1,0 +1,97 @@
+Reading config for TERRAGRUNT_NAVIGATOR_SRC_DIR/tests/env/region/cluster/terragrunt.hcl
+Reading file: TERRAGRUNT_NAVIGATOR_SRC_DIR/tests/env/region/cluster/terragrunt.hcl
+(configFile (body (block locals { (body (argument type = (expression (exprTerm (literals (stringLiterals "shop"))))) (argument zone1 = (expression (exprTerm (literals (stringLiterals "mst"))))) (argument zone2 = (expression (exprTerm (literals (stringLiterals "pst"))))) (argument a = (expression (exprTerm (collectionValue (tuple_ [ (expression (exprTerm (literals (basicLiterals 1)))) , (expression (exprTerm (literals (basicLiterals 2)))) ]))))) (argument b = (expression (exprTerm (collectionValue (tuple_ [ (expression (exprTerm (literals (stringLiterals (getAttrIdent local.a))))) , (expression (exprTerm (literals (basicLiterals 3)))) ]))))) (argument c = (expression (exprTerm (collectionValue (object_ { (objectElement a = (expression (exprTerm (literals (basicLiterals 1))))) , (objectElement b = (expression (exprTerm (literals (basicLiterals 2))))) }))))) (argument d = (expression (exprTerm (collectionValue (tuple_ [ (expression (exprTerm (collectionValue (object_ { (objectElement c = (expression (exprTerm (literals (basicLiterals 5))))) })))) , (expression (exprTerm (collectionValue (object_ { (objectElement d = (expression (exprTerm (literals (basicLiterals 7))))) })))) ]))))) (argument primary = (expression (exprTerm (functionCall format ( (functionArgs (expression (exprTerm (literals (stringLiterals "%s-%s-us")))) , (expression (exprTerm (literals (stringLiterals (getAttrIdent local.type))))) , (expression (exprTerm (literals (stringLiterals (getAttrIdent local.zone1)))))) ))))) (argument secondary = (expression (exprTerm (functionCall format ( (functionArgs (expression (exprTerm (literals (stringLiterals "%s-%s-us")))) , (expression (exprTerm (literals (stringLiterals (getAttrIdent local.type))))) , (expression (exprTerm (literals (stringLiterals (getAttrIdent local.zone2)))))) ))))) (argument add_failover = (expression (exprTerm (literals (basicLiterals (boolean_ false)))))) (argument cluster_names = (expression (conditional (exprTerm (literals (stringLiterals (getAttrIdent local.add_failover)))) ? (expression (exprTerm (collectionValue (tuple_ [ (expression (exprTerm (literals (stringLiterals (getAttrIdent local.primary))))) , (expression (exprTerm (literals (stringLiterals (getAttrIdent local.secondary))))) ])))) : (expression (exprTerm (collectionValue (tuple_ [ (expression (exprTerm (literals (stringLiterals (getAttrIdent local.primary))))) ]))))))) (argument negative_number = (expression (operation (unaryOp (unaryOperator -) (exprTerm (literals (basicLiterals 5))))))) (argument positive_number = (expression (operation (unaryOp (unaryOperator +) (exprTerm (literals (basicLiterals 5))))))) (argument not_add_failover = (expression (operation (unaryOp (unaryOperator !) (exprTerm (literals (stringLiterals (getAttrIdent local.add_failover)))))))) (argument is_production = (expression (operation (binaryOp (exprTerm (literals (stringLiterals (getAttrIdent local.type)))) (binaryOperator (compareOperator ==)) (exprTerm (literals (stringLiterals "production"))))))) (argument is_mst_zone = (expression (operation (binaryOp (exprTerm (literals (stringLiterals (getAttrIdent local.zone1)))) (binaryOperator (compareOperator ==)) (exprTerm (literals (stringLiterals "mst"))))))) (argument is_pst_zone = (expression (operation (binaryOp (exprTerm (literals (stringLiterals (getAttrIdent local.zone2)))) (binaryOperator (compareOperator ==)) (exprTerm (literals (stringLiterals "pst"))))))) (argument is_a_greater_than_b = (expression (operation (binaryOp (exprTerm (exprTerm (literals (stringLiterals (getAttrIdent local.a)))) (index [ (expression (exprTerm (literals (basicLiterals 0)))) ])) (binaryOperator (compareOperator >)) (exprTerm (literals (basicLiterals 5))))))) (argument enable_feature = (expression (operation (binaryOp (exprTerm (literals (stringLiterals (getAttrIdent local.is_production)))) (binaryOperator (logicOperator &&)) (exprTerm (literals (stringLiterals (getAttrIdent local.is_mst_zone)))))))) (argument disable_feature = (expression (operation (unaryOp (unaryOperator !) (operation (binaryOp (exprTerm (literals (stringLiterals (getAttrIdent local.is_production)))) (binaryOperator (logicOperator ||)) (exprTerm (literals (stringLiterals (getAttrIdent local.is_pst_zone)))))))))) (argument instances = (expression (exprTerm (collectionValue (tuple_ [ (expression (exprTerm (collectionValue (object_ { (objectElement name = (expression (exprTerm (literals (stringLiterals "instance1"))))) , (objectElement type = (expression (exprTerm (literals (stringLiterals "t2.micro"))))) , (objectElement active = (expression (exprTerm (literals (basicLiterals (boolean_ true)))))) })))) , (expression (exprTerm (collectionValue (object_ { (objectElement name = (expression (exprTerm (literals (stringLiterals "instance2"))))) , (objectElement type = (expression (exprTerm (literals (stringLiterals "t2.medium"))))) , (objectElement active = (expression (exprTerm (literals (basicLiterals (boolean_ false)))))) })))) , (expression (exprTerm (collectionValue (object_ { (objectElement name = (expression (exprTerm (literals (stringLiterals "instance3"))))) , (objectElement type = (expression (exprTerm (literals (stringLiterals "t2.large"))))) , (objectElement active = (expression (exprTerm (literals (basicLiterals (boolean_ true)))))) })))) ]))))) (argument names = (expression (exprTerm (collectionValue (tuple_ [ (expression (exprTerm (literals (stringLiterals "Alice")))) , (expression (exprTerm (literals (stringLiterals "Bob")))) , (expression (exprTerm (literals (stringLiterals "Charlie")))) ])))))) }) (block output "greetings" { (body (argument value = (expression (exprTerm (forExpr (forTupleExpr [ (forIntro for name in (expression (exprTerm (literals (stringLiterals (getAttrIdent local.names))))) :) (expression (exprTerm (literals (stringLiterals "Hello, ${name}!")))) (forCond if (expression (operation (binaryOp (exprTerm (variableExpr name)) (binaryOperator (compareOperator ==)) (exprTerm (literals (stringLiterals "Bob"))))))) ]))))) (argument active_instances = (expression (exprTerm (forExpr (forObjectExpr { (forIntro for instance in (expression (exprTerm (literals (stringLiterals (getAttrIdent local.instances))))) :) (expression (exprTerm (literals (stringLiterals (getAttrIdent instance.name))))) => (expression (exprTerm (literals (stringLiterals (getAttrIdent instance.type))))) (forCond if (expression (exprTerm (literals (stringLiterals (getAttrIdent instance.active)))))) })))))) }) (block terraform { (body (argument source = (expression (exprTerm (literals (stringLiterals (interpolatedString "git::https://github.com/terraform-aws-modules/terraform-aws-eks.git//modules/aws-auth?ref=${read_terragrunt_config(find_in_parent_folders("vpc.hcl")).locals.version}"))))))) }) (block include { (body (argument path = (expression (exprTerm (functionCall find_in_parent_folders ( functionArgs )))))) }) (block dependency "vpc" { (body (argument config_path = (expression (exprTerm (literals (stringLiterals "../../vpc")))))) }) (argument inputs = (expression (exprTerm (collectionValue (object_ { (objectElement region_code = (expression (exprTerm (literals (stringLiterals "us-east-1"))))) })))))) <EOF>)
+Reading file: TERRAGRUNT_NAVIGATOR_SRC_DIR/tests/env/vpc.hcl
+(configFile (body (block locals { (body (argument version = (expression (exprTerm (literals (stringLiterals "v20.24.0")))))) })) <EOF>)
+{
+  "locals": {
+    "type": "shop",
+    "zone1": "mst",
+    "zone2": "pst",
+    "a": [
+      "1",
+      "2"
+    ],
+    "b": [
+      [
+        "1",
+        "2"
+      ],
+      "3"
+    ],
+    "c": {
+      "a": "1",
+      "b": "2"
+    },
+    "d": [
+      {
+        "c": "5"
+      },
+      {
+        "d": "7"
+      }
+    ],
+    "primary": "shop-mst-us",
+    "secondary": "shop-pst-us",
+    "add_failover": "false",
+    "cluster_names": [
+      "shop-mst-us"
+    ],
+    "negative_number": -5,
+    "positive_number": 5,
+    "not_add_failover": true,
+    "is_production": false,
+    "is_mst_zone": true,
+    "is_pst_zone": true,
+    "is_a_greater_than_b": false,
+    "enable_feature": false,
+    "disable_feature": true,
+    "instances": [
+      {
+        "name": "instance1",
+        "type": "t2.micro",
+        "active": "true"
+      },
+      {
+        "name": "instance2",
+        "type": "t2.medium",
+        "active": "false"
+      },
+      {
+        "name": "instance3",
+        "type": "t2.large",
+        "active": "true"
+      }
+    ],
+    "names": [
+      "Alice",
+      "Bob",
+      "Charlie"
+    ]
+  },
+  "output": {
+    "greetings": {
+      "value": [
+        "Hello, Bob!"
+      ],
+      "active_instances": {
+        "instance1": "t2.micro",
+        "instance3": "t2.large"
+      }
+    }
+  },
+  "terraform": {
+    "source": "git::https://github.com/terraform-aws-modules/terraform-aws-eks.git//modules/aws-auth?ref=v20.24.0"
+  },
+  "include": {
+    "path": "TERRAGRUNT_NAVIGATOR_SRC_DIR/tests/env/terragrunt.hcl"
+  },
+  "dependency": {
+    "vpc": {
+      "config_path": "TERRAGRUNT_NAVIGATOR_SRC_DIR/tests/env/vpc"
+    }
+  },
+  "inputs": {
+    "region_code": "us-east-1"
+  }
+}

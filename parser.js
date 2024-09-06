@@ -141,7 +141,7 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
         } else if (ruleName === 'binaryOperator') {
             let value = child.getText();
             if (value && ident) {
-                configs[ident] = configs[ident] ? configs[ident] + value : value;
+                configs[ident] = configs[ident] !== undefined ? configs[ident] + value : value;
             }
             traverse(tfInfo, parser, child, configs, ranges, identInfo);
             identInfo.evalNeeded = true;
@@ -157,6 +157,12 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             traverse(tfInfo, parser, child.children[4], obj, ranges, identInfo);
             let falseValue = obj.conditional;
             configs[ident] = condition ? trueValue : falseValue;
+        } else if (ruleName === 'index') {
+            let obj = {};
+            const identInfo = { name: 'index' };
+            traverse(tfInfo, parser, child, obj, ranges, identInfo);
+            let index = obj.index;
+            configs[ident] = configs[ident][index];
         } else if (ruleName === 'basicLiterals' || ruleName === 'stringLiterals' || ruleName === 'functionCall') {
             let value = child.getText();
             let val = value;
@@ -171,7 +177,7 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
                 if (Array.isArray(configs[ident])) {
                     configs[ident].push(val);
                 } else {
-                    if (ruleName === 'stringLiterals') {
+                    if (ruleName === 'stringLiterals' && typeof val === 'string') {
                         val = '"' + val + '"';
                     }
                     val = configs[ident] ? configs[ident] + val : val;
@@ -595,6 +601,9 @@ if (require.main === module) {
     };
     try {
         let filePath = process.argv[2];
+        if (!path.isAbsolute(filePath)) {
+            filePath = path.resolve(filePath);
+        }
         console.log('Reading config for ' + filePath);
         if (path.basename(filePath) === 'main.tf') {
             let varFile = filePath.replace('main.tf', 'variables.tf');

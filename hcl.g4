@@ -128,12 +128,12 @@ operation
     | binaryOp
     ;
 
-binaryOp
-    : exprTerm binaryOperator exprTerm
+unaryOp
+    :  unaryOperator (exprTerm|operation)
     ;
 
-unaryOp
-    :  unaryOperator exprTerm
+binaryOp
+    : exprTerm binaryOperator (exprTerm|operation)
     ;
 
 unaryOperator
