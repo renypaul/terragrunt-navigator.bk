@@ -78,7 +78,7 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             const name = firstChild.getText();
             const identInfo = {
                 name: name,
-                value: [],
+                buffer: [],
                 evalNeeded: false,
                 range: {
                     __range: {
@@ -103,6 +103,12 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
                 let objRanges = {};
                 traverse(tfInfo, parser, child, obj, objRanges, identInfo);
                 configs[ident].push(obj);
+            } else if (configs[ident]) {
+                let obj = {};
+                let objRanges = {};
+                traverse(tfInfo, parser, child, obj, objRanges, identInfo);
+                configs[ident] = obj;
+                ranges[ident] = identInfo.range;
             } else {
                 configs[ident] = {};
                 ranges[ident] = {};
@@ -113,9 +119,16 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
                 ranges = mapRanges;
             }
         } else if (ruleName === 'tuple_') {
-            configs[ident] = [];
-            ranges[ident] = identInfo.range;
-            traverse(tfInfo, parser, child, configs, ranges, identInfo);
+            if (Array.isArray(configs[ident])) {
+                let obj = [];
+                let objRanges = [];
+                traverse(tfInfo, parser, child, obj, objRanges, identInfo);
+                configs[ident].push(obj);
+            } else {
+                configs[ident] = [];
+                ranges[ident] = identInfo.range;
+                traverse(tfInfo, parser, child, configs, ranges, identInfo);
+            }
         } else if (ruleName === 'expression') {
             traverse(tfInfo, parser, child, configs, ranges, identInfo);
         } else if (ruleName === 'unaryOperator') {
@@ -133,10 +146,17 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             traverse(tfInfo, parser, child, configs, ranges, identInfo);
             identInfo.evalNeeded = true;
         } else if (ruleName === 'conditional') {
-            let calc = {};
-            identInfo.calc = calc;
-            traverse(tfInfo, parser, child, configs, ranges, identInfo);
-            configs[ident] = calc['value'][0] ? calc['value'][1] : calc['value'][2];
+            let obj = {};
+            const identInfo = { name: 'conditional' };
+            traverse(tfInfo, parser, child.children[0], obj, ranges, identInfo);
+            let condition = obj.conditional;
+            obj = {};
+            traverse(tfInfo, parser, child.children[2], obj, ranges, identInfo);
+            let trueValue = obj.conditional;
+            obj = {};
+            traverse(tfInfo, parser, child.children[4], obj, ranges, identInfo);
+            let falseValue = obj.conditional;
+            configs[ident] = condition ? trueValue : falseValue;
         } else if (ruleName === 'basicLiterals' || ruleName === 'stringLiterals' || ruleName === 'functionCall') {
             let value = child.getText();
             let val = value;
@@ -148,20 +168,16 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             if (value && ident) {
                 //console.log(ruleName + " -> " + value + ". EvalNeeded: " + evalNeeded);
                 val = evalNeeded ? evalExpression(value, tfInfo.configs) : value;
-                if (identInfo.calc && identInfo.calc['value']) {
-                    identInfo.calc['value'].push(val);
+                if (Array.isArray(configs[ident])) {
+                    configs[ident].push(val);
                 } else {
-                    if (Array.isArray(configs[ident])) {
-                        configs[ident].push(val);
-                    } else {
-                        if (ruleName === 'stringLiterals') {
-                            val = '"' + val + '"';
-                        }
-                        val = configs[ident] ? configs[ident] + val : val;
-                        configs[ident] = val;
+                    if (ruleName === 'stringLiterals') {
+                        val = '"' + val + '"';
                     }
-                    ranges[ident] = identInfo.range;
+                    val = configs[ident] ? configs[ident] + val : val;
+                    configs[ident] = val;
                 }
+                ranges[ident] = identInfo.range;
             }
         } else if (ruleName === 'forTupleExpr') {
             try {
