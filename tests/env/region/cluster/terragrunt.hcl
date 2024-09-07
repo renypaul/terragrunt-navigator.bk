@@ -1,3 +1,7 @@
+
+
+
+
 locals {
   type  = "shop"
   zone1 = "mst"

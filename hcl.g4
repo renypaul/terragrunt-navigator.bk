@@ -40,19 +40,19 @@ configFile
     ;
 
 body
-    : NEWLINE* (argument | block | oneLineBlock)*
+    : (argument | block | oneLineBlock)*
     ;
 
 block
-    : IDENTIFIER (IDENTIFIER | STRING_LITERAL)* LCURL NEWLINE? body RCURL NEWLINE?
+    : IDENTIFIER (IDENTIFIER | STRING_LITERAL)* LCURL body RCURL
     ;
 
 oneLineBlock
-    : IDENTIFIER (IDENTIFIER | STRING_LITERAL)* LCURL argument? RCURL NEWLINE?
+    : IDENTIFIER (IDENTIFIER | STRING_LITERAL)* LCURL argument? RCURL
     ;
 
 argument
-    : IDENTIFIER ASSIGN expression NEWLINE?
+    : IDENTIFIER ASSIGN expression
     ;
 
 expression
@@ -97,11 +97,11 @@ collectionValue
     ;
 
 tuple_
-    : LBRACK (expression ((COMMA | NEWLINE?) expression)* COMMA?)? RBRACK
+    : LBRACK (expression ((COMMA |) expression)* COMMA?)? RBRACK
     ;
 
 object_
-    : LCURL NEWLINE? ((objectElement ((COMMA? | NEWLINE?) objectElement)* COMMA?)?) NEWLINE? RCURL
+    : LCURL ((objectElement ((COMMA? |) objectElement)* COMMA?)?) RCURL
     ;
 
 objectElement
@@ -253,10 +253,6 @@ fragment ESCAPED_CHAR
 
 WS
     : [ \t\r\n]+ -> skip
-    ;
-
-NEWLINE
-    : '\r'? '\n'
     ;
 
 COMMENT
