@@ -1,24 +1,24 @@
 {
   "configurations": [
-    // {
-    //   "args": [
-    //     "--extensionDevelopmentPath=${workspaceFolder}"
-    //   ],
-    //   "env": {
-    //     "NODE_ENV": "debug"
-    //   },
-    //   "name": "Run Extension",
-    //   "outFiles": [
-    //     "${workspaceFolder}/extension.js"
-    //   ],
-    //   "request": "launch",
-    //   "runtimeExecutable": "${execPath}",
-    //   "type": "extensionHost"
-    // }
+    {
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}"
+      ],
+      "env": {
+        "NODE_ENV": "debug"
+      },
+      "name": "Run Extension",
+      "outFiles": [
+        "${workspaceFolder}/extension.js"
+      ],
+      "request": "launch",
+      "runtimeExecutable": "${execPath}",
+      "type": "extensionHost"
+    },
     {
       "type": "node",
       "request": "launch",
-      "name": "Launch Program",
+      "name": "Node App",
       "skipFiles": [
         "<node_internals>/**"
       ],
@@ -28,17 +28,17 @@
         "/root/op.hcl"
         //"/tmp/test.hcl"
       ]
+    },
+    {
+      "name": "Debug ANTLR4 grammar",
+      "type": "antlr-debug",
+      "request": "launch",
+      "input": "/root/op.hcl",
+      "grammar": "${workspaceFolder}/hcl.g4",
+      "startRule": "configFile",
+      "printParseTree": true,
+      "visualParseTree": true
     }
-    // {
-    //   "name": "Debug ANTLR4 grammar",
-    //   "type": "antlr-debug",
-    //   "request": "launch",
-    //   "input": "/root/op.hcl",
-    //   "grammar": "${workspaceFolder}/hcl.g4",
-    //   "startRule": "configFile",
-    //   "printParseTree": true,
-    //   "visualParseTree": true
-    // }
   ],
   "version": "0.2.0"
 }

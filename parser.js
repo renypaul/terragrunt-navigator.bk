@@ -156,7 +156,11 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             obj = {};
             traverse(tfInfo, parser, child.children[4], obj, ranges, identInfo);
             let falseValue = obj.conditional;
-            configs[ident] = condition ? trueValue : falseValue;
+            try {
+                configs[ident] = condition ? trueValue : falseValue;
+            } catch (e) {
+                console.log('Error in conditional: ' + child.getText() + ' Error: ' + e);
+            }
         } else if (ruleName === 'index') {
             let obj = {};
             const identInfo = { name: 'index' };

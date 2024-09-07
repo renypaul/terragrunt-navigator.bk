@@ -35,7 +35,6 @@ TRUE: 'true';
 FALSE: 'false';
 NULL: 'null';
 
-
 configFile
     : body EOF
     ;
@@ -112,7 +111,6 @@ objectElement
 index
     : LBRACK expression RBRACK
     ;
-
 
 getAttrIdent
     : KNOWN_GETATTR
@@ -202,7 +200,7 @@ forExpr
     ;
 
 forObjectExpr
-    : LCURL forIntro expression '=>' expression forCond? RCURL
+    : LCURL forIntro expression ARROW expression forCond? RCURL
     ;
 
 forTupleExpr
@@ -238,7 +236,7 @@ INTERPOLATED_STRING
     ;
 
 STRING_LITERAL
-    : (QUOTE ~[\r\n]*? QUOTE)
+    : QUOTE (ESCAPED_CHAR|.)*? QUOTE
     ;
 
 fragment DECIMAL
@@ -247,6 +245,10 @@ fragment DECIMAL
 
 fragment EXPMARK
     : [eE] [+-]?
+    ;
+
+fragment ESCAPED_CHAR
+    : '\\' [btnfr"\\]
     ;
 
 WS
