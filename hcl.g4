@@ -69,7 +69,7 @@ exprTerm
     | functionCall
     | forExpr
     | exprTerm index
-//    | exprTerm getAttr
+    | exprTerm getAttr
 //    | exprTerm splat
     | LPAREN expression RPAREN
     ;
@@ -86,8 +86,7 @@ basicLiterals
     ;
 
 stringLiterals
-    : getAttrIdent
-    | interpolatedString
+    : interpolatedString
     | STRING_LITERAL
     ;
 
@@ -112,9 +111,9 @@ index
     : LBRACK expression RBRACK
     ;
 
-getAttrIdent
-    : KNOWN_GETATTR
-    | GENERIC_GETATTR
+
+getAttr
+    : (index | (DOT IDENTIFIER))+
     ;
 
 interpolatedString
@@ -213,14 +212,6 @@ forIntro
 
 forCond
     : 'if' expression
-    ;
-
-KNOWN_GETATTR
-    : ('local'|'var'|'dependency'|'module') (DOT IDENTIFIER)+
-    ;
-
-GENERIC_GETATTR
-    : IDENTIFIER (DOT IDENTIFIER)+
     ;
 
 IDENTIFIER

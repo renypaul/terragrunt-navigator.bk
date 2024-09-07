@@ -95,6 +95,17 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
                 ? evalExpression(configs[ident], tfInfo.configs)
                 : processValue(configs[ident]);
             ranges[ident] = identInfo.range;
+        } else if (ruleName === 'expression') {
+            let obj = {};
+            const identInfo = { name: 'expression' };
+            traverse(tfInfo, parser, child, obj, ranges, identInfo);
+            let value = obj.expression;
+            value = identInfo.evalNeeded ? evalExpression(value, tfInfo.configs) : processValue(value);
+            if (Array.isArray(configs[ident])) {
+                configs[ident].push(value);
+            } else {
+                configs[ident] = configs[ident] !== undefined ? configs[ident] + value : value;
+            }
         } else if (ruleName === 'object_') {
             let mapConfigs = configs;
             let mapRanges = ranges;
@@ -113,7 +124,7 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
                 configs[ident] = {};
                 ranges[ident] = {};
                 configs = configs[ident];
-                ranges = identInfo.range;
+                ranges = ranges[ident];
                 traverse(tfInfo, parser, child, configs, ranges, identInfo);
                 configs = mapConfigs;
                 ranges = mapRanges;
@@ -129,12 +140,10 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
                 ranges[ident] = identInfo.range;
                 traverse(tfInfo, parser, child, configs, ranges, identInfo);
             }
-        } else if (ruleName === 'expression') {
-            traverse(tfInfo, parser, child, configs, ranges, identInfo);
         } else if (ruleName === 'unaryOperator') {
             let value = child.getText();
             if (value && ident) {
-                configs[ident] = configs[ident] ? configs[ident] + value : value;
+                configs[ident] = configs[ident] !== undefined ? configs[ident] + value : value;
             }
             traverse(tfInfo, parser, child, configs, ranges, identInfo);
             identInfo.evalNeeded = true;
@@ -161,34 +170,17 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             } catch (e) {
                 console.log('Error in conditional: ' + child.getText() + ' Error: ' + e);
             }
+        } else if (ruleName === 'getAttr') {
+            let attr = child.getText();
+            configs[ident] = configs[ident] !== undefined ? configs[ident] + attr : attr;
+            identInfo.evalNeeded = true;
         } else if (ruleName === 'index') {
             let obj = {};
             const identInfo = { name: 'index' };
             traverse(tfInfo, parser, child, obj, ranges, identInfo);
             let index = obj.index;
-            configs[ident] = configs[ident][index];
-        } else if (ruleName === 'basicLiterals' || ruleName === 'stringLiterals' || ruleName === 'functionCall') {
-            let value = child.getText();
-            let val = value;
-            let evalNeeded = false;
-            if (ruleName !== 'basicLiterals') {
-                evalNeeded = true;
-            }
-
-            if (value && ident) {
-                //console.log(ruleName + " -> " + value + ". EvalNeeded: " + evalNeeded);
-                val = evalNeeded ? evalExpression(value, tfInfo.configs) : value;
-                if (Array.isArray(configs[ident])) {
-                    configs[ident].push(val);
-                } else {
-                    if (ruleName === 'stringLiterals' && typeof val === 'string') {
-                        val = '"' + val + '"';
-                    }
-                    val = configs[ident] ? configs[ident] + val : val;
-                    configs[ident] = val;
-                }
-                ranges[ident] = identInfo.range;
-            }
+            configs[ident] = configs[ident] !== undefined ? configs[ident] + index : index;
+            identInfo.evalNeeded = true;
         } else if (ruleName === 'forTupleExpr') {
             try {
                 let forRule = child.children[1].children.map((child) => child.getText());
@@ -241,6 +233,34 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
                 ranges[ident] = identInfo.range;
             } catch (e) {
                 console.log('Error in forObjectExpr: ' + e);
+            }
+        } else if (
+            ruleName === 'basicLiterals' ||
+            ruleName === 'variableExpr' ||
+            ruleName === 'stringLiterals' ||
+            ruleName === 'functionCall'
+        ) {
+            let value = child.getText();
+            let val = value;
+            let evalNeeded = false;
+            if (ruleName === 'stringLiterals' || ruleName === 'functionCall') {
+                evalNeeded = true;
+            }
+
+            if (value && ident) {
+                //console.log(ruleName + " -> " + value + ". EvalNeeded: " + evalNeeded);
+                val = evalNeeded ? evalExpression(value, tfInfo.configs) : value;
+                if (Array.isArray(configs[ident])) {
+                    val = processValue(val);
+                    configs[ident].push(val);
+                } else {
+                    if (ruleName === 'stringLiterals' && typeof val === 'string') {
+                        val = '"' + val + '"';
+                    }
+                    val = configs[ident] !== undefined ? configs[ident] + val : val;
+                    configs[ident] = val;
+                }
+                ranges[ident] = identInfo.range;
             }
         } else if (child.children) {
             traverse(tfInfo, parser, child, configs, ranges, identInfo);
@@ -556,22 +576,36 @@ function evalExpression(exp, configs) {
 function runEval(exp, configs) {
     let value = exp;
     try {
-        let local = configs && configs.locals ? configs.locals : {};
         if (typeof exp === 'string') {
+            exp = exp.replace(/(module|data)\./g, 'configs.$1.');
+            if (exp.includes('local.')) {
+                exp = exp.replace(/local./g, 'configs.locals.');
+            }
             if (exp.includes('var.')) {
-                exp = exp.replace('var.', 'configs.variable.');
+                exp = exp.replace(/var./g, 'configs.variable.');
             }
             if (exp.includes('dependency.')) {
                 exp = exp.replace(/dependency\.([^.]+)\.outputs\./g, 'configs.dependency.$1.mock_outputs.');
             }
         }
-        let path = { module: globalTfInfo.startDir };
+        let context = {
+            path: {
+                module: globalTfInfo.startDir,
+                root: globalTfInfo.startDir,
+                cwd: globalTfInfo.startDir,
+            },
+            terraform: {
+                workspace: globalTfInfo.startDir,
+            },
+            configs: configs,
+        };
         //console.log("Evaluating expression: " + exp);
-        value = eval(exp);
-        // convert boolean string to boolean
-        if (typeof value === 'string' && (value === 'true' || value === 'false')) {
-            value = value === 'true';
-        }
+        value = (function () {
+            with (context) {
+                return eval(exp);
+            }
+        })();
+        value = processValue(value);
     } catch (e) {
         console.log('Failed to evaluate expression: ' + exp + ' Error: ' + e);
     }
@@ -580,8 +614,17 @@ function runEval(exp, configs) {
 
 function processValue(value) {
     if (typeof value === 'string') {
-        value = value.replace(/"/g, '');
-        if (value.startsWith('./') || value.startsWith('../')) {
+        if (value === 'true' || value === 'false') {
+            value === 'true';
+        } else if (value === 'null') {
+            value = null;
+        } else if (value === 'undefined') {
+            value = undefined;
+        } else if (!isNaN(value)) {
+            value = Number(value);
+        } else if (value.startsWith('"') && value.endsWith('"')) {
+            value = value.substring(1, value.length - 1);
+        } else if (value.startsWith('./') || value.startsWith('../')) {
             value = path.resolve(globalTfInfo.startDir, value);
         }
     }

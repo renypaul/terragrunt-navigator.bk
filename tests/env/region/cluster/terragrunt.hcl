@@ -39,6 +39,7 @@ locals {
     { name = "instance3", type = "t2.large", active = true }
   ]
   names = ["Alice", "Bob", "Charlie"]
+  kms_key_id = var.kms_key_id == null ? module.kms_key[10].key_id : var.kms_key_id
 }
 
 output "greetings" {
