@@ -234,16 +234,31 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             } catch (e) {
                 console.log('Error in forObjectExpr: ' + e);
             }
-        } else if (
-            ruleName === 'basicLiterals' ||
-            ruleName === 'variableExpr' ||
-            ruleName === 'stringLiterals' ||
-            ruleName === 'functionCall'
-        ) {
+        } else if (ruleName === 'functionCall') {
+            const identInfo = { name: 'functionCall' };
+            let funcName = child.children[0].getText();
+            let obj = {};
+            traverse(tfInfo, parser, child, obj, ranges, identInfo);
+            let args = obj.functionCall !== undefined ? obj.functionCall : '';
+            let funcString = funcName + '(' + args + ')';
+            configs[ident] = evalExpression(funcString, tfInfo.configs);
+        } else if (ruleName == 'functionArgs') {
+            const identInfo = { name: 'functionArgs' };
+            if (child.children) {
+                for (let j = 0; j < child.children.length; j++) {
+                    let obj = { functionArgs: '' };
+                    traverse(tfInfo, parser, child.children[j], obj, ranges, identInfo);
+                    if (obj.functionArgs !== '') {
+                        configs[ident] =
+                            configs[ident] !== undefined ? configs[ident] + ',' + obj.functionArgs : obj.functionArgs;
+                    }
+                }
+            }
+        } else if (ruleName === 'basicLiterals' || ruleName === 'variableExpr' || ruleName === 'stringLiterals') {
             let value = child.getText();
             let val = value;
             let evalNeeded = false;
-            if (ruleName === 'stringLiterals' || ruleName === 'functionCall') {
+            if (ruleName === 'stringLiterals') {
                 evalNeeded = true;
             }
 
@@ -579,10 +594,10 @@ function runEval(exp, configs) {
         if (typeof exp === 'string') {
             exp = exp.replace(/(module|data)\./g, 'configs.$1.');
             if (exp.includes('local.')) {
-                exp = exp.replace(/local./g, 'configs.locals.');
+                exp = exp.replace(/local\./g, 'configs.locals.');
             }
             if (exp.includes('var.')) {
-                exp = exp.replace(/var./g, 'configs.variable.');
+                exp = exp.replace(/var\./g, 'configs.variable.');
             }
             if (exp.includes('dependency.')) {
                 exp = exp.replace(/dependency\.([^.]+)\.outputs\./g, 'configs.dependency.$1.mock_outputs.');
@@ -665,5 +680,6 @@ if (require.main === module) {
         //console.log(JSON.stringify(tfInfo.ranges, null, 2));
     } catch (e) {
         console.log('Failed to read terragrunt config: ' + e);
+        console.log(tfInfo.configs);
     }
 }
