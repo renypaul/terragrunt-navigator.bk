@@ -240,7 +240,7 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             let obj = {};
             traverse(tfInfo, parser, child, obj, ranges, identInfo);
             let args = obj.functionCall !== undefined ? obj.functionCall : '';
-            let funcString = funcName + '(' + args + ')';
+            let funcString = funcName + `(${JSON.stringify(args).replace(/\"/g, '')})`;
             configs[ident] = evalExpression(funcString, tfInfo.configs);
         } else if (ruleName == 'functionArgs') {
             const identInfo = { name: 'functionArgs' };
@@ -473,6 +473,10 @@ function substr(value, start, length) {
 
 function timestamp() {
     return new Date().toISOString();
+}
+
+function tomap(map) {
+    return new Map(map);
 }
 
 function trimspace(value) {
