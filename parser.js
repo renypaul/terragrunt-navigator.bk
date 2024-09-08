@@ -97,15 +97,16 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             ranges[ident] = identInfo.range;
         } else if (ruleName === 'expression') {
             let obj = {};
-            const identInfo = { name: 'expression' };
-            traverse(tfInfo, parser, child, obj, ranges, identInfo);
+            const childIdentInfo = { name: 'expression', range: identInfo.range };
+            traverse(tfInfo, parser, child, obj, ranges, childIdentInfo);
             let value = obj.expression;
-            value = identInfo.evalNeeded ? evalExpression(value, tfInfo) : processValue(value, tfInfo);
+            value = childIdentInfo.evalNeeded ? evalExpression(value, tfInfo) : processValue(value, tfInfo);
             if (Array.isArray(configs[ident])) {
                 value = processValue(value, tfInfo);
                 configs[ident].push(value);
             } else {
                 updateValue(configs, ident, value);
+                ranges[ident] = childIdentInfo.range;
             }
         } else if (ruleName === 'object_') {
             let mapConfigs = configs;
@@ -173,11 +174,11 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             identInfo.evalNeeded = true;
         } else if (ruleName === 'index') {
             let obj = {};
-            const identInfo = { name: 'index' };
-            traverse(tfInfo, parser, child, obj, ranges, identInfo);
+            const childIdentInfo = { name: 'index', range: identInfo.range };
+            traverse(tfInfo, parser, child, obj, ranges, childIdentInfo);
             let index = obj.index;
             updateValue(configs, ident, index);
-            identInfo.evalNeeded = true;
+            childIdentInfo.evalNeeded = true;
         } else if (ruleName === 'forTupleExpr') {
             try {
                 let forRule = child.children[1].children.map((child) => child.getText());
@@ -235,20 +236,20 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
                 console.log('Error in forObjectExpr: ' + e);
             }
         } else if (ruleName === 'functionCall') {
-            const identInfo = { name: 'functionCall' };
+            const childIdentInfo = { name: 'functionCall', range: identInfo.range };
             let funcName = child.children[0].getText();
             let obj = {};
-            traverse(tfInfo, parser, child, obj, ranges, identInfo);
+            traverse(tfInfo, parser, child, obj, ranges, childIdentInfo);
             let args = obj.functionCall !== undefined ? obj.functionCall : '';
             tfInfo.contextBuffer = { args: args };
             let funcString = funcName + '(' + args + ')';
             configs[ident] = evalExpression(funcString, tfInfo);
         } else if (ruleName == 'functionArgs') {
-            const identInfo = { name: 'functionArgs' };
+            const childIdentInfo = { name: 'functionArgs', range: identInfo.range };
             if (child.children) {
                 for (let j = 0; j < child.children.length; j++) {
                     let obj = { functionArgs: '' };
-                    traverse(tfInfo, parser, child.children[j], obj, ranges, identInfo);
+                    traverse(tfInfo, parser, child.children[j], obj, ranges, childIdentInfo);
                     if (obj.functionArgs !== '') {
                         updateValue(configs, ident, obj.functionArgs, ',');
                     }
@@ -287,9 +288,9 @@ function abs(value) {
     return Math.abs(value);
 }
 
-function can(expression) {
+function can(exp) {
     try {
-        eval(expression);
+        eval(exp);
         return true;
     } catch (e) {
         return false;
@@ -476,7 +477,7 @@ function timestamp() {
 }
 
 function tomap(map) {
-    return new Map(map);
+    return map;
 }
 
 function trimspace(value) {
