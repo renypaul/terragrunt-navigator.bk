@@ -78,7 +78,6 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             const name = firstChild.getText();
             const identInfo = {
                 name: name,
-                buffer: [],
                 evalNeeded: false,
                 range: {
                     __range: {
@@ -92,6 +91,7 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             traverse(tfInfo, parser, child, configs, ranges, identInfo);
             ident = identInfo.name;
             if (identInfo.evalNeeded) {
+                tfInfo.contextBuffer = {};
                 configs[ident] = evalExpression(configs[ident], tfInfo);
             }
             configs[ident] = processValue(configs[ident], tfInfo);
@@ -101,28 +101,21 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             const childIdentInfo = { name: 'expression', range: identInfo.range };
             traverse(tfInfo, parser, child, obj, objRanges, childIdentInfo);
             let value = obj.expression;
+            tfInfo.contextBuffer = {};
             value = childIdentInfo.evalNeeded ? evalExpression(value, tfInfo) : processValue(value, tfInfo);
-            if (Array.isArray(configs[ident])) {
-                value = processValue(value, tfInfo);
-                configs[ident].push(value);
-            } else {
-                updateValue(configs, ident, value);
-                ranges[ident] = objRanges.expression;
-            }
-        } else if (ruleName === 'object_') {
+            updateValue(tfInfo, configs, ident, value);
+            updateValue(tfInfo, ranges, ident, objRanges.expression);
+        } else if (ruleName === 'object') {
             let mapConfigs = configs;
             let mapRanges = ranges;
             if (Array.isArray(configs[ident])) {
                 let obj = {};
                 let objRanges = {};
                 traverse(tfInfo, parser, child, obj, objRanges, identInfo);
-                configs[ident].push(obj);
-            } else if (configs[ident]) {
-                let obj = {};
-                let objRanges = {};
-                traverse(tfInfo, parser, child, obj, objRanges, identInfo);
-                configs[ident] = obj;
-                ranges[ident] = objRanges;
+                updateValue(tfInfo, configs, ident, obj);
+                updateValue(tfInfo, ranges, ident, objRanges);
+            } else if (typeof configs[ident] === 'object') {
+                traverse(tfInfo, parser, child, configs, ranges, identInfo);
             } else {
                 configs[ident] = {};
                 ranges[ident] = {};
@@ -133,26 +126,26 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
                 configs = mapConfigs;
                 ranges = mapRanges;
             }
-        } else if (ruleName === 'tuple_') {
-            ranges[ident] = identInfo.range;
+        } else if (ruleName === 'tuple') {
             if (Array.isArray(configs[ident])) {
                 let obj = [];
                 let objRanges = [];
                 traverse(tfInfo, parser, child, obj, objRanges, identInfo);
-                configs[ident].push(obj);
+                updateValue(tfInfo, configs, ident, obj);
+                updateValue(tfInfo, ranges, ident, objRanges);
             } else {
                 configs[ident] = [];
-                ranges[ident] = identInfo.range;
+                ranges[ident] = [];
                 traverse(tfInfo, parser, child, configs, ranges, identInfo);
             }
         } else if (ruleName === 'unaryOperator') {
             let value = child.getText();
-            updateValue(configs, ident, value);
+            updateValue(tfInfo, configs, ident, value);
             traverse(tfInfo, parser, child, configs, ranges, identInfo);
             identInfo.evalNeeded = true;
         } else if (ruleName === 'binaryOperator') {
             let value = child.getText();
-            updateValue(configs, ident, value);
+            updateValue(tfInfo, configs, ident, value);
             traverse(tfInfo, parser, child, configs, ranges, identInfo);
             identInfo.evalNeeded = true;
         } else if (ruleName === 'conditional') {
@@ -174,35 +167,33 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             }
         } else if (ruleName === 'getAttr') {
             let attr = child.getText();
-            updateValue(configs, ident, attr);
+            updateValue(tfInfo, configs, ident, attr);
             identInfo.evalNeeded = true;
         } else if (ruleName === 'index') {
             let obj = {};
             const childIdentInfo = { name: 'index', range: identInfo.range };
             traverse(tfInfo, parser, child, obj, ranges, childIdentInfo);
             let index = obj.index;
-            updateValue(configs, ident, index);
+            updateValue(tfInfo, configs, ident, index);
             childIdentInfo.evalNeeded = true;
         } else if (ruleName === 'forTupleExpr') {
             try {
                 let forRule = child.children[1].children.map((child) => child.getText());
                 let key = forRule[1];
+                tfInfo.contextBuffer = {};
                 let list = evalExpression(forRule[3], tfInfo);
-                let valueExp = child.children[2].getText().replace(key, 'configs.' + key);
+                let valueExp = child.children[2].getText();
                 let condition = null;
                 if (child.children.length > 4) {
-                    condition = child.children[3].children[1].getText().replace(key, 'configs.' + key);
+                    condition = child.children[3].children[1].getText();
                 }
-                let tfPath = tfInfo.path;
-                let result = [];
 
+                let result = [];
                 list.forEach((item) => {
-                    let tfInfo = { configs: {}, path: tfPath };
-                    tfInfo.configs = {};
-                    configs[key] = item;
+                    tfInfo.contextBuffer[key] = item;
                     let conditionValue = condition != null ? evalExpression(condition, tfInfo) : true;
                     if (conditionValue) {
-                        result.push(evalExpression(valueExp, tfInfo));
+                        result.push(evalExpression(valueExp, tfInfo, true));
                     }
                 });
 
@@ -214,22 +205,23 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             try {
                 let forRule = child.children[1].children.map((child) => child.getText());
                 let key = forRule[1];
+                tfInfo.contextBuffer = {};
                 let list = evalExpression(forRule[3], tfInfo);
-                let keyExp = child.children[2].getText().replace(key, 'configs.' + key);
-                let valueExp = child.children[4].getText().replace(key, 'configs.' + key);
+                let keyExp = child.children[2].getText();
+                let valueExp = child.children[4].getText();
                 let condition = null;
                 if (child.children.length > 5) {
-                    condition = child.children[5].children[1].getText().replace(key, 'configs.' + key);
+                    condition = child.children[5].children[1].getText();
                 }
-                let tfPath = tfInfo.path;
-                let result = {};
 
+                let result = {};
                 list.forEach((item) => {
-                    let tfInfo = { configs: {}, path: tfPath };
-                    tfInfo.configs[key] = item;
+                    tfInfo.contextBuffer[key] = item;
                     conditionValue = condition != null ? evalExpression(condition, tfInfo) : true;
                     if (conditionValue) {
-                        result[evalExpression(keyExp, tfInfo)] = evalExpression(valueExp, tfInfo);
+                        let key = evalExpression(keyExp, tfInfo, true);
+                        let value = evalExpression(valueExp, tfInfo, true);
+                        result[key] = value;
                     }
                 });
 
@@ -244,8 +236,8 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             let obj = {};
             traverse(tfInfo, parser, child, obj, ranges, childIdentInfo);
             let args = obj.functionCall !== undefined ? obj.functionCall : '';
-            tfInfo.contextBuffer = { args: args };
             let funcString = funcName + '(' + args + ')';
+            tfInfo.contextBuffer = { args: args };
             configs[ident] = evalExpression(funcString, tfInfo);
             ranges[ident] = identInfo.range;
         } else if (ruleName == 'functionArgs') {
@@ -255,32 +247,31 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
                     let obj = { functionArgs: '' };
                     traverse(tfInfo, parser, child.children[j], obj, ranges, childIdentInfo);
                     if (obj.functionArgs !== '') {
-                        updateValue(configs, ident, obj.functionArgs, ',');
+                        updateValue(tfInfo, configs, ident, obj.functionArgs, ',');
                     }
                 }
             }
-        } else if (ruleName === 'basicLiterals' || ruleName === 'variableExpr' || ruleName === 'stringLiterals') {
+        } else if (ruleName === 'basicLiterals' || ruleName === 'variableExpr') {
             let value = child.getText();
-            let val = value;
-            let evalNeeded = false;
-            if (ruleName === 'stringLiterals') {
-                evalNeeded = true;
-            }
-
-            if (value && ident) {
-                //console.log(ruleName + " -> " + value + ". EvalNeeded: " + evalNeeded);
-                val = evalNeeded ? evalExpression(value, tfInfo) : value;
-                if (Array.isArray(configs[ident])) {
-                    val = processValue(val, tfInfo);
-                    configs[ident].push(val);
-                } else {
-                    if (ruleName === 'stringLiterals') {
-                        val = quote(val);
-                    }
-                    updateValue(configs, ident, val);
-                }
-                ranges[ident] = identInfo.range;
-            }
+            updateValue(tfInfo, configs, ident, value);
+            ranges[ident] = identInfo.range;
+        } else if (ruleName === 'boolean') {
+            let value = child.getText() == 'true';
+            updateValue(tfInfo, configs, ident, value);
+            ranges[ident] = identInfo.range;
+        } else if (ruleName === 'interpolatedString') {
+            let value = child.getText();
+            tfInfo.contextBuffer = {};
+            value = value.substring(1, value.length - 1);
+            value = evalExpression(value, tfInfo);
+            updateValue(tfInfo, configs, ident, value);
+            ranges[ident] = identInfo.range;
+        } else if (ruleName === 'stringLiteral') {
+            let value = child.getText();
+            tfInfo.contextBuffer = {};
+            value = evalExpression(value, tfInfo);
+            updateValue(tfInfo, configs, ident, value);
+            ranges[ident] = identInfo.range;
         } else if (child.children) {
             traverse(tfInfo, parser, child, configs, ranges, identInfo);
         }
@@ -318,7 +309,7 @@ function endswith(value, suffix) {
 
 function file(filePath) {
     if (!path.isAbsolute(filePath)) {
-        filePath = path.resolve(tfInfo.path.root, filePath);
+        filePath = path.resolve(globalTfInfo.path.root, filePath);
     }
     if (!fs.existsSync(filePath)) {
         return 'FileNotFound';
@@ -511,7 +502,7 @@ function find_in_parent_folders(fileName = null) {
     while (currentDir !== '/') {
         let filePath = path.join(currentDir, fileName);
         if (fs.existsSync(filePath)) {
-            return '"' + filePath + '"';
+            return filePath;
         }
         currentDir = path.dirname(currentDir);
     }
@@ -523,10 +514,10 @@ function read_terragrunt_config(filePath, tfInfo = {}) {
     console.log('Reading file:', filePath);
     if (path.isAbsolute(filePath)) {
         configStartDir = path.dirname(filePath);
-    } else if (!tfInfo.path.root) {
+    } else if (!globalTfInfo.path.root) {
         throw new Error('startDir is not provided');
     } else {
-        filePath = path.resolve(tfInfo.path.root, filePath);
+        filePath = path.resolve(globalTfInfo.path.root, filePath);
     }
 
     if (tfInfo.freshStart) {
@@ -566,7 +557,7 @@ function read_terragrunt_config(filePath, tfInfo = {}) {
     parser.buildParseTrees = true;
     const tree = parser.configFile();
 
-    // console.log(tree.toStringTree(parser.ruleNames));
+    console.log(tree.toStringTree(parser.ruleNames));
     traverse(tfInfo, parser, tree, tfInfo.configs, tfInfo.ranges, null);
 
     return tfInfo.configs;
@@ -589,7 +580,7 @@ function path_relative_from_include(includeName = null, configs = globalTfInfo.c
     return relativePath;
 }
 
-function evalExpression(exp, configs) {
+function evalExpression(exp, tfInfo, processOutput = false) {
     let value = exp;
 
     let matches = value.match(/\$\{([^}]+)\}/g);
@@ -597,16 +588,21 @@ function evalExpression(exp, configs) {
         for (let i = 0; i < matches.length; i++) {
             let match = matches[i];
             let key = match.substring(2, match.length - 1);
-            let val = runEval(key, configs);
-            value = value.replace(match, val);
+            let val = runEval(key, tfInfo, processOutput);
+            if (typeof val === 'string') {
+                value = value.replace(match, val.substring(1, val.length - 1));
+            }
         }
     } else {
-        value = runEval(value, configs);
+        value = runEval(value, tfInfo);
+    }
+    if (processOutput) {
+        value = processValue(value, tfInfo);
     }
     return value;
 }
 
-function runEval(exp, tfInfo) {
+function runEval(exp, tfInfo, processOutput = false) {
     let value = exp;
     try {
         if (typeof exp === 'string') {
@@ -637,6 +633,9 @@ function runEval(exp, tfInfo) {
                 return val;
             }
         })();
+        if (processOutput) {
+            value = processValue(value, tfInfo);
+        }
     } catch (e) {
         console.log('Failed to evaluate expression: ' + exp + ' Error: ' + e);
     }
@@ -652,7 +651,9 @@ function processValue(value, tfInfo) {
         } else if (value.startsWith('"') && value.endsWith('"')) {
             value = value.substring(1, value.length - 1);
         } else if (value.startsWith('./') || value.startsWith('../')) {
-            value = path.resolve(tfInfo.path.root, value);
+            if (tfInfo.path !== undefined && globalTfInfo.path.root !== undefined) {
+                value = path.resolve(globalTfInfo.path.root, value);
+            }
         }
     } else if (value === undefined) {
         value = 'undefined';
@@ -668,9 +669,14 @@ function quote(value) {
     }
 }
 
-function updateValue(obj, key, value, separator = '') {
+function updateValue(tfInfo, obj, key, value, separator = '') {
     if (key !== undefined && obj !== undefined && key !== null && obj !== null) {
-        obj[key] = obj[key] === undefined ? value : obj[key] + separator + value;
+        if (Array.isArray(obj[key])) {
+            value = processValue(value, tfInfo);
+            obj[key].push(value);
+        } else {
+            obj[key] = obj[key] === undefined ? value : obj[key] + separator + value;
+        }
     }
 }
 
@@ -691,6 +697,11 @@ if (require.main === module) {
     };
     try {
         let filePath = process.argv[2];
+        let printRange = false;
+        if (process.argv.length > 3) {
+            printRange = process.argv[3] === 'true';
+        }
+
         if (!path.isAbsolute(filePath)) {
             filePath = path.resolve(filePath);
         }
@@ -705,7 +716,9 @@ if (require.main === module) {
         tfInfo.freshStart = true;
         configs = read_terragrunt_config(filePath, tfInfo);
         console.log(JSON.stringify(tfInfo.configs, null, 2));
-        //console.log(JSON.stringify(tfInfo.ranges, null, 2));
+        if (printRange) {
+            console.log(JSON.stringify(tfInfo.ranges, null, 2));
+        }
     } catch (e) {
         console.log('Failed to read terragrunt config: ' + e);
         console.log(tfInfo.configs);

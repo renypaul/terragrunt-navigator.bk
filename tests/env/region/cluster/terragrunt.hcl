@@ -1,5 +1,7 @@
 
-
+terraform {
+  source = "git::https://github.com/terraform-aws-modules/terraform-aws-eks.git//modules/aws-auth?ref=${read_terragrunt_config(find_in_parent_folders("vpc.hcl")).locals.version}"
+}
 
 
 locals {
@@ -49,10 +51,6 @@ output "greetings" {
     instance.name => instance.type
     if instance.active
   }
-}
-
-terraform {
-  source = "git::https://github.com/terraform-aws-modules/terraform-aws-eks.git//modules/aws-auth?ref=${read_terragrunt_config(find_in_parent_folders("vpc.hcl")).locals.version}"
 }
 
 include {

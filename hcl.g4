@@ -1,6 +1,5 @@
 grammar hcl;
 
-// Avoid keywords of language in token, label or rule names
 QUOTE: '"';
 PLUS: '+';
 MINUS: '-';
@@ -76,30 +75,30 @@ exprTerm
 
 literals
     : basicLiterals
-    | stringLiterals
+    | boolean
+    | interpolatedString
+    | stringLiteral
     ;
 
 basicLiterals
     : NUMBER
-    | boolean_
     | NULL
     ;
 
-stringLiterals
-    : interpolatedString
-    | STRING_LITERAL
+stringLiteral
+    : STRING_LITERAL
     ;
 
 collectionValue
-    : tuple_
-    | object_
+    : tuple
+    | object
     ;
 
-tuple_
+tuple
     : LBRACK (expression ((COMMA |) expression)* COMMA?)? RBRACK
     ;
 
-object_
+object
     : LCURL ((objectElement ((COMMA? |) objectElement)* COMMA?)?) RCURL
     ;
 
@@ -167,7 +166,7 @@ logicOperator
     | OR
     ;
 
-boolean_
+boolean
     : TRUE
     | FALSE
     ;
@@ -223,7 +222,7 @@ NUMBER
     ;
 
 INTERPOLATED_STRING
-    : (QUOTE ~[\r\n]*? (DOLLAR_LCURL ~[\r\n]*? RCURL) QUOTE)
+    : (QUOTE ~[\r\n]*? (DOLLAR_LCURL ~[\r\n]*? RCURL) ~[\r\n]*? QUOTE)
     ;
 
 STRING_LITERAL
