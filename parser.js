@@ -566,8 +566,7 @@ function read_terragrunt_config(filePath, tfInfo = {}) {
     parser.buildParseTrees = true;
     const tree = parser.configFile();
 
-    // dump json tree
-    console.log(tree.toStringTree(parser.ruleNames));
+    // console.log(tree.toStringTree(parser.ruleNames));
     traverse(tfInfo, parser, tree, tfInfo.configs, tfInfo.ranges, null);
 
     return tfInfo.configs;
@@ -648,10 +647,6 @@ function processValue(value, tfInfo) {
     if (typeof value === 'string') {
         if (value === 'true' || value === 'false') {
             value === 'true';
-        } else if (value === 'null') {
-            value = null;
-        } else if (value === undefined) {
-            value = 'undefined';
         } else if (!isNaN(value)) {
             value = Number(value);
         } else if (value.startsWith('"') && value.endsWith('"')) {
@@ -659,6 +654,8 @@ function processValue(value, tfInfo) {
         } else if (value.startsWith('./') || value.startsWith('../')) {
             value = path.resolve(tfInfo.path.root, value);
         }
+    } else if (value === undefined) {
+        value = 'undefined';
     }
     return value;
 }
@@ -672,14 +669,7 @@ function quote(value) {
 }
 
 function updateValue(obj, key, value, separator = '') {
-    if (
-        key !== undefined &&
-        value !== undefined &&
-        obj !== undefined &&
-        key !== null &&
-        value !== null &&
-        obj !== null
-    ) {
+    if (key !== undefined && obj !== undefined && key !== null && obj !== null) {
         obj[key] = obj[key] === undefined ? value : obj[key] + separator + value;
     }
 }
