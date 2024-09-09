@@ -590,7 +590,10 @@ function evalExpression(exp, tfInfo, processOutput = false) {
             let key = match.substring(2, match.length - 1);
             let val = runEval(key, tfInfo, processOutput);
             if (typeof val === 'string') {
-                value = value.replace(match, val.substring(1, val.length - 1));
+                if (val.startsWith('"') && val.endsWith('"')) {
+                    val = val.substring(1, val.length - 1);
+                }
+                value = value.replace(match, val);
             }
         }
     } else {
