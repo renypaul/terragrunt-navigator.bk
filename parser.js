@@ -152,13 +152,14 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             let obj = {};
             const childIdentInfo = { name: 'conditional', range: identInfo.range };
             traverse(tfInfo, parser, child.children[0], obj, ranges, childIdentInfo);
-            let condition = obj.conditional;
+            tfInfo.contextBuffer = {};
+            let condition = evalExpression(obj.conditional, tfInfo);
             obj = {};
             traverse(tfInfo, parser, child.children[2], obj, ranges, childIdentInfo);
-            let trueValue = obj.conditional;
+            let trueValue = evalExpression(obj.conditional, tfInfo);
             obj = {};
             traverse(tfInfo, parser, child.children[4], obj, ranges, childIdentInfo);
-            let falseValue = obj.conditional;
+            let falseValue = evalExpression(obj.conditional, tfInfo);
             try {
                 configs[ident] = condition ? trueValue : falseValue;
                 ranges[ident] = identInfo.range;
@@ -198,6 +199,7 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
                 });
 
                 configs[ident] = result;
+                ranges[ident] = identInfo.range;
             } catch (e) {
                 console.log('Error in forTupleExpr: ' + e);
             }
@@ -581,8 +583,11 @@ function path_relative_from_include(includeName = null, configs = globalTfInfo.c
 }
 
 function evalExpression(exp, tfInfo, processOutput = false) {
-    let value = exp;
+    if (typeof exp !== 'string') {
+        return exp;
+    }
 
+    let value = exp;
     let matches = value.match(/\$\{([^}]+)\}/g);
     if (matches) {
         for (let i = 0; i < matches.length; i++) {
@@ -609,21 +614,20 @@ function runEval(exp, tfInfo, processOutput = false) {
     let value = exp;
     try {
         if (typeof exp === 'string') {
-            exp = exp.replace(/(module|data)\./g, 'configs.$1.');
-            if (exp.includes('local.')) {
-                exp = exp.replace(/local\./g, 'configs.locals.');
-            }
             if (exp.includes('var.')) {
-                exp = exp.replace(/var\./g, 'configs.variable.');
+                exp = exp.replace(/var\./g, 'tfInfo.configs.variable.');
             }
             if (exp.includes('dependency.')) {
-                exp = exp.replace(/dependency\.([^.]+)\.outputs\./g, 'configs.dependency.$1.mock_outputs.');
+                exp = exp.replace(/dependency\.([^.]+)\.outputs\./g, 'tfInfo.configs.dependency.$1.mock_outputs.');
             }
         }
         let context = {
             path: tfInfo.path,
             terraform: tfInfo.terraform,
             configs: tfInfo.configs,
+            module: tfInfo.configs.module,
+            data: tfInfo.configs.data,
+            local: tfInfo.configs.locals,
         };
         if (tfInfo.contextBuffer) {
             context = Object.assign(context, tfInfo.contextBuffer);
