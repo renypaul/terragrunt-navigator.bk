@@ -80,6 +80,7 @@ class TerragruntNav {
     replacementStrings = [];
     quickReplaceStringsCount = 1;
     getCodePath = '';
+    tfInfo = {};
 
     constructor(context) {
         const repoCacheDir = process.platform === 'win32' ? process.env.USERPROFILE : process.env.HOME;
@@ -149,7 +150,7 @@ class TerragruntNav {
 
         this.updateConfigs();
         try {
-            this.decorateKeys(lhsDecorations, this.configs, this.ranges);
+            this.decorateKeys(lhsDecorations, this.tfInfo.configs, this.tfInfo.ranges);
         } catch (e) {
             console.log('Failed to decorate keys: ' + e);
         }
@@ -171,7 +172,7 @@ class TerragruntNav {
 
     decorateKeys(decorations, configs = {}, ranges = {}) {
         for (let key in configs) {
-            if (configs.hasOwnProperty(key) && ranges.hasOwnProperty(key)) {
+            if (ranges && ranges.hasOwnProperty(key)) {
                 let value = configs[key];
                 let range = ranges[key];
                 if (range.hasOwnProperty('__range')) {
@@ -207,10 +208,8 @@ class TerragruntNav {
 
                 for (let ii = 0; ii < match.length; ii++) {
                     let str = match[ii].trim();
-                    var value = Terragrunt.evalExpression(str, this.configs);
-                    if (value === undefined || value === null) {
-                        value = 'undefined';
-                    }
+                    var value = Terragrunt.evalExpression(str, this.tfInfo);
+                    value = Terragrunt.processValue(value, this.tfInfo);
                     let range = new vscode.Range(
                         line,
                         textLine.text.indexOf(match[ii]),
@@ -254,28 +253,20 @@ class TerragruntNav {
     }
 
     updateConfigs() {
-        let tfInfo = {
-            freshStart: true,
-            startDir: null,
-            configs: {},
-            ranges: {},
-            tfConfigCount: 0,
-        };
         try {
+            this.tfInfo.configs = {};
+            this.tfInfo.ranges = {};
             console.log('Reading config for ' + vscode.window.activeTextEditor.document.uri.fsPath);
             if (path.basename(vscode.window.activeTextEditor.document.uri.fsPath) === 'main.tf') {
                 let varFile = vscode.window.activeTextEditor.document.uri.fsPath.replace('main.tf', 'variables.tf');
                 if (fs.existsSync(varFile)) {
                     console.log('Reading variables for main.tf ' + varFile);
-                    this.configs = Terragrunt.read_terragrunt_config(varFile, tfInfo);
+                    this.tfInfo.freshStart = true;
+                    Terragrunt.read_terragrunt_config(varFile, this.tfInfo);
                 }
             }
-            tfInfo.freshStart = true;
-            this.configs = Terragrunt.read_terragrunt_config(
-                vscode.window.activeTextEditor.document.uri.fsPath,
-                tfInfo,
-            );
-            this.ranges = tfInfo.ranges;
+            this.tfInfo.freshStart = true;
+            Terragrunt.read_terragrunt_config(vscode.window.activeTextEditor.document.uri.fsPath, this.tfInfo);
         } catch (e) {
             console.log('Failed to read terragrunt config: ' + e);
         }
@@ -303,7 +294,8 @@ class TerragruntNav {
                 srcPath = srcPath.replace(replacement.find, replacement.replace);
             }
         }
-        srcPath = Terragrunt.evalExpression(srcPath, this.configs);
+        srcPath = Terragrunt.evalExpression(srcPath, this.tfInfo);
+        srcPath = Terragrunt.processValue(srcPath, this.tfInfo);
 
         return { path: srcPath, range };
     }

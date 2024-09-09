@@ -91,14 +91,15 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             };
             traverse(tfInfo, parser, child, configs, ranges, identInfo);
             ident = identInfo.name;
-            configs[ident] = identInfo.evalNeeded
-                ? evalExpression(configs[ident], tfInfo)
-                : processValue(configs[ident], tfInfo);
-            ranges[ident] = identInfo.range;
+            if (identInfo.evalNeeded) {
+                configs[ident] = evalExpression(configs[ident], tfInfo);
+            }
+            configs[ident] = processValue(configs[ident], tfInfo);
         } else if (ruleName === 'expression') {
             let obj = {};
+            let objRanges = {};
             const childIdentInfo = { name: 'expression', range: identInfo.range };
-            traverse(tfInfo, parser, child, obj, ranges, childIdentInfo);
+            traverse(tfInfo, parser, child, obj, objRanges, childIdentInfo);
             let value = obj.expression;
             value = childIdentInfo.evalNeeded ? evalExpression(value, tfInfo) : processValue(value, tfInfo);
             if (Array.isArray(configs[ident])) {
@@ -106,7 +107,7 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
                 configs[ident].push(value);
             } else {
                 updateValue(configs, ident, value);
-                ranges[ident] = childIdentInfo.range;
+                ranges[ident] = objRanges.expression;
             }
         } else if (ruleName === 'object_') {
             let mapConfigs = configs;
@@ -121,10 +122,11 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
                 let objRanges = {};
                 traverse(tfInfo, parser, child, obj, objRanges, identInfo);
                 configs[ident] = obj;
-                ranges[ident] = identInfo.range;
+                ranges[ident] = objRanges;
             } else {
                 configs[ident] = {};
                 ranges[ident] = {};
+                ranges[ident]['__range'] = identInfo.range.__range;
                 configs = configs[ident];
                 ranges = ranges[ident];
                 traverse(tfInfo, parser, child, configs, ranges, identInfo);
@@ -132,6 +134,7 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
                 ranges = mapRanges;
             }
         } else if (ruleName === 'tuple_') {
+            ranges[ident] = identInfo.range;
             if (Array.isArray(configs[ident])) {
                 let obj = [];
                 let objRanges = [];
@@ -154,17 +157,18 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             identInfo.evalNeeded = true;
         } else if (ruleName === 'conditional') {
             let obj = {};
-            const identInfo = { name: 'conditional' };
-            traverse(tfInfo, parser, child.children[0], obj, ranges, identInfo);
+            const childIdentInfo = { name: 'conditional', range: identInfo.range };
+            traverse(tfInfo, parser, child.children[0], obj, ranges, childIdentInfo);
             let condition = obj.conditional;
             obj = {};
-            traverse(tfInfo, parser, child.children[2], obj, ranges, identInfo);
+            traverse(tfInfo, parser, child.children[2], obj, ranges, childIdentInfo);
             let trueValue = obj.conditional;
             obj = {};
-            traverse(tfInfo, parser, child.children[4], obj, ranges, identInfo);
+            traverse(tfInfo, parser, child.children[4], obj, ranges, childIdentInfo);
             let falseValue = obj.conditional;
             try {
                 configs[ident] = condition ? trueValue : falseValue;
+                ranges[ident] = identInfo.range;
             } catch (e) {
                 console.log('Error in conditional: ' + child.getText() + ' Error: ' + e);
             }
@@ -203,7 +207,6 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
                 });
 
                 configs[ident] = result;
-                ranges[ident] = identInfo.range;
             } catch (e) {
                 console.log('Error in forTupleExpr: ' + e);
             }
@@ -244,6 +247,7 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             tfInfo.contextBuffer = { args: args };
             let funcString = funcName + '(' + args + ')';
             configs[ident] = evalExpression(funcString, tfInfo);
+            ranges[ident] = identInfo.range;
         } else if (ruleName == 'functionArgs') {
             const childIdentInfo = { name: 'functionArgs', range: identInfo.range };
             if (child.children) {
@@ -273,8 +277,7 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
                     if (ruleName === 'stringLiterals') {
                         val = quote(val);
                     }
-                    val = configs[ident] !== undefined ? configs[ident] + val : val;
-                    configs[ident] = val;
+                    updateValue(configs, ident, val);
                 }
                 ranges[ident] = identInfo.range;
             }
@@ -527,6 +530,12 @@ function read_terragrunt_config(filePath, tfInfo = {}) {
     }
 
     if (tfInfo.freshStart) {
+        if (tfInfo.configs === undefined) {
+            tfInfo.configs = {};
+        }
+        if (tfInfo.ranges === undefined) {
+            tfInfo.ranges = {};
+        }
         tfInfo.path = {
             module: configStartDir,
             root: configStartDir,
@@ -641,8 +650,8 @@ function processValue(value, tfInfo) {
             value === 'true';
         } else if (value === 'null') {
             value = null;
-        } else if (value === 'undefined') {
-            value = undefined;
+        } else if (value === undefined) {
+            value = 'undefined';
         } else if (!isNaN(value)) {
             value = Number(value);
         } else if (value.startsWith('"') && value.endsWith('"')) {
@@ -679,6 +688,7 @@ const Terragrunt = {
     find_in_parent_folders: find_in_parent_folders,
     read_terragrunt_config: read_terragrunt_config,
     evalExpression: evalExpression,
+    processValue: processValue,
 };
 
 module.exports = Terragrunt;
