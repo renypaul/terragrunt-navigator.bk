@@ -557,7 +557,7 @@ function read_terragrunt_config(filePath, tfInfo = {}) {
     parser.buildParseTrees = true;
     const tree = parser.configFile();
 
-    console.log(tree.toStringTree(parser.ruleNames));
+    //console.log(tree.toStringTree(parser.ruleNames));
     traverse(tfInfo, parser, tree, tfInfo.configs, tfInfo.ranges, null);
 
     return tfInfo.configs;
