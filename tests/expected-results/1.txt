@@ -1,6 +1,9 @@
 Reading config for TERRAGRUNT_NAVIGATOR_SRC_DIR/tests/env/region/cluster/terragrunt.hcl
 Reading file: TERRAGRUNT_NAVIGATOR_SRC_DIR/tests/env/region/cluster/terragrunt.hcl
 Reading file: TERRAGRUNT_NAVIGATOR_SRC_DIR/tests/env/vpc.hcl
+Failed to evaluate expression: tfInfo.configs.variable.kms_key_id==null.default Error: TypeError: Cannot read properties of undefined (reading 'kms_key_id')
+Failed to evaluate expression: module.kms_key[10].key_id Error: TypeError: Cannot read properties of undefined (reading 'kms_key')
+Failed to evaluate expression: tfInfo.configs.variable.kms_key_id.default Error: TypeError: Cannot read properties of undefined (reading 'kms_key_id')
 {
   "terraform": {
     "source": "git::https://github.com/terraform-aws-modules/terraform-aws-eks.git//modules/aws-auth?ref=v20.24.0"
@@ -34,14 +37,14 @@ Reading file: TERRAGRUNT_NAVIGATOR_SRC_DIR/tests/env/vpc.hcl
     ],
     "primary": "shop-mst-us",
     "secondary": "shop-pst-us",
-    "add_failover": false,
+    "add_failover": true,
     "cluster_names": [
       "shop-mst-us",
       "shop-pst-us"
     ],
     "negative_number": -5,
     "positive_number": 5,
-    "not_add_failover": true,
+    "not_add_failover": false,
     "is_production": false,
     "is_mst_zone": true,
     "is_pst_zone": true,

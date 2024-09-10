@@ -183,18 +183,30 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
                 let key = forRule[1];
                 tfInfo.contextBuffer = {};
                 let list = evalExpression(forRule[3], tfInfo);
-                let valueExp = child.children[2].getText();
-                let condition = null;
+                let obj = {};
+                let objRanges = {};
+                let childIdentInfo = { name: 'forTupleExpr', range: identInfo.range, evalNeeded: false };
+                traverse(tfInfo, parser, child.children[2], obj, objRanges, childIdentInfo);
+                let valueExp = obj.forTupleExpr;
+                let conditionExp = null;
                 if (child.children.length > 4) {
-                    condition = child.children[3].children[1].getText();
+                    conditionExp = child.children[3].children[1].getText();
                 }
 
                 let result = [];
                 list.forEach((item) => {
                     tfInfo.contextBuffer[key] = item;
-                    let conditionValue = condition != null ? evalExpression(condition, tfInfo) : true;
-                    if (conditionValue) {
-                        result.push(evalExpression(valueExp, tfInfo, true));
+                    let condition = conditionExp != null ? evalExpression(conditionExp, tfInfo) : true;
+                    if (condition) {
+                        if (typeof valueExp === 'object') {
+                            let value = {};
+                            for (let key in valueExp) {
+                                value[key] = evalExpression(valueExp[key], tfInfo, true);
+                            }
+                            result.push(value);
+                        } else {
+                            result.push(evalExpression(valueExp, tfInfo, true));
+                        }
                     }
                 });
 
@@ -210,20 +222,32 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
                 tfInfo.contextBuffer = {};
                 let list = evalExpression(forRule[3], tfInfo);
                 let keyExp = child.children[2].getText();
-                let valueExp = child.children[4].getText();
-                let condition = null;
+                let obj = {};
+                let objRanges = {};
+                let childIdentInfo = { name: 'forObjectExpr', range: identInfo.range, evalNeeded: false };
+                traverse(tfInfo, parser, child.children[4], obj, objRanges, childIdentInfo);
+                let valueExp = obj.forObjectExpr;
+                let conditionExp = null;
                 if (child.children.length > 5) {
-                    condition = child.children[5].children[1].getText();
+                    conditionExp = child.children[5].children[1].getText();
                 }
 
                 let result = {};
                 list.forEach((item) => {
                     tfInfo.contextBuffer[key] = item;
-                    conditionValue = condition != null ? evalExpression(condition, tfInfo) : true;
-                    if (conditionValue) {
-                        let key = evalExpression(keyExp, tfInfo, true);
-                        let value = evalExpression(valueExp, tfInfo, true);
-                        result[key] = value;
+                    let condition = conditionExp != null ? evalExpression(conditionExp, tfInfo) : true;
+                    if (condition) {
+                        if (typeof valueExp === 'object') {
+                            let value = {};
+                            for (let key in valueExp) {
+                                value[key] = evalExpression(valueExp[key], tfInfo, true);
+                            }
+                            result[key] = value;
+                        } else {
+                            let key = evalExpression(keyExp, tfInfo, true);
+                            let value = evalExpression(valueExp, tfInfo, true);
+                            result[key] = value;
+                        }
                     }
                 });
 
@@ -265,7 +289,9 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             let value = child.getText();
             tfInfo.contextBuffer = {};
             value = value.substring(1, value.length - 1);
-            value = evalExpression(value, tfInfo);
+            if (identInfo.evalNeeded == undefined || identInfo.evalNeeded) {
+                value = evalExpression(value, tfInfo);
+            }
             updateValue(tfInfo, configs, ident, value);
             ranges[ident] = identInfo.range;
         } else if (ruleName === 'stringLiteral') {
@@ -295,6 +321,15 @@ function can(exp) {
 
 function ceil(value) {
     return Math.ceil(value);
+}
+
+function cidrsubnet(cidr, newbits, netnum) {
+    let parts = cidr.split('/');
+    let ip = parts[0];
+    let mask = parseInt(parts[1], 10);
+    let newmask = mask + newbits;
+    let newcidr = ip + '/' + newmask;
+    return newcidr;
 }
 
 function concat(...lists) {
@@ -371,6 +406,10 @@ function format(formatString, ...args) {
     });
 }
 
+function index(list, value) {
+    return list.indexOf(value);
+}
+
 function join(separator, list) {
     return list.join(separator);
 }
@@ -394,6 +433,10 @@ function length(value) {
         console.log('Unsupported type for size function');
         return 0;
     }
+}
+
+function log(value) {
+    return Math.log(value);
 }
 
 function lookup(map, key, defaultValue = null) {
@@ -615,7 +658,11 @@ function runEval(exp, tfInfo, processOutput = false) {
     try {
         if (typeof exp === 'string') {
             if (exp.includes('var.')) {
-                exp = exp.replace(/var\./g, 'tfInfo.configs.variable.');
+                // Get the variable value from the configs
+                // Extract var.* from string like '{name:format("%s-subnet-public-%s",var.environment,availability_zone),cidr_block:cidrsubnet(var.cidr_block,ceil(log(local.max_subnets,2)),index(local.availability_zones,availability_zone)),availability_zone:availability_zone}
+                // Replace var.name.variable with tfInfo.configs.variable.default.variable if tfInfo.configs.variable.default is defined
+                // Otherwise replace var.name.variable with tfInfo.configs.variable.name.variable
+                exp = exp.replace(/(var\.)([^\. |\]}\r\n,]+)([^ |\]}\r\n,]*)/g, 'tfInfo.configs.variable.$2.default$3');
             }
             if (exp.includes('dependency.')) {
                 exp = exp.replace(/dependency\.([^.]+)\.outputs\./g, 'tfInfo.configs.dependency.$1.mock_outputs.');
