@@ -61,6 +61,8 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
                 // For e.g. multiple variables section in the same file
                 if (!configs.hasOwnProperty(label)) {
                     configs[label] = {};
+                }
+                if (!ranges.hasOwnProperty(label)) {
                     ranges[label] = {};
                 }
 
@@ -771,6 +773,18 @@ if (require.main === module) {
         if (!path.isAbsolute(filePath)) {
             filePath = path.resolve(filePath);
         }
+
+        // If the same directory contains input.json, read the input.json file
+        let baseDir = path.dirname(filePath);
+        let inputJson = path.join(baseDir, 'input.json');
+        if (fs.existsSync(inputJson)) {
+            tfInfo.configs.variable = {};
+            console.log('Reading input file: ' + inputJson);
+            let input = fs.readFileSync(inputJson, 'utf8');
+            let inputs = JSON.parse(input);
+            tfInfo.configs.variable = Object.assign(tfInfo.configs.variable, inputs);
+        }
+
         console.log('Reading config for ' + filePath);
         if (path.basename(filePath) === 'main.tf') {
             let varFile = filePath.replace('main.tf', 'variables.tf');
