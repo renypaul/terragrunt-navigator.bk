@@ -26,6 +26,7 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             let blockType = firstChild.getText();
             const identInfo = {
                 name: blockType,
+                blockType: blockType,
                 evalNeeded: false,
                 range: {
                     __range: {
@@ -76,8 +77,9 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             const line = firstChild.start ? firstChild.start.line : child.start.line;
             const start = firstChild.start ? firstChild.start.column : child.start.column;
             const name = firstChild.getText();
-            const identInfo = {
+            const childIdentInfo = {
                 name: name,
+                blockType: identInfo && identInfo.blockType ? identInfo.blockType : 'argument',
                 evalNeeded: false,
                 range: {
                     __range: {
@@ -88,9 +90,9 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
                     },
                 },
             };
-            traverse(tfInfo, parser, child, configs, ranges, identInfo);
-            ident = identInfo.name;
-            if (identInfo.evalNeeded) {
+            traverse(tfInfo, parser, child, configs, ranges, childIdentInfo);
+            ident = childIdentInfo.name;
+            if (childIdentInfo.evalNeeded) {
                 tfInfo.contextBuffer = {};
                 configs[ident] = evalExpression(configs[ident], tfInfo);
             }
@@ -98,7 +100,7 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
         } else if (ruleName === 'expression') {
             let obj = {};
             let objRanges = {};
-            const childIdentInfo = { name: 'expression', range: identInfo.range };
+            const childIdentInfo = { name: 'expression', blockType: identInfo.blockType, range: identInfo.range };
             traverse(tfInfo, parser, child, obj, objRanges, childIdentInfo);
             let value = obj.expression;
             tfInfo.contextBuffer = {};
@@ -150,7 +152,7 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             identInfo.evalNeeded = true;
         } else if (ruleName === 'conditional') {
             let obj = {};
-            const childIdentInfo = { name: 'conditional', range: identInfo.range };
+            const childIdentInfo = { name: 'conditional', blockType: identInfo.blockType, range: identInfo.range };
             traverse(tfInfo, parser, child.children[0], obj, ranges, childIdentInfo);
             tfInfo.contextBuffer = {};
             let condition = evalExpression(obj.conditional, tfInfo);
@@ -172,7 +174,7 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             identInfo.evalNeeded = true;
         } else if (ruleName === 'index') {
             let obj = {};
-            const childIdentInfo = { name: 'index', range: identInfo.range };
+            const childIdentInfo = { name: 'index', blockType: identInfo.blockType, range: identInfo.range };
             traverse(tfInfo, parser, child, obj, ranges, childIdentInfo);
             let index = obj.index;
             updateValue(tfInfo, configs, ident, index);
@@ -185,7 +187,12 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
                 let list = evalExpression(forRule[3], tfInfo);
                 let obj = {};
                 let objRanges = {};
-                let childIdentInfo = { name: 'forTupleExpr', range: identInfo.range, evalNeeded: false };
+                let childIdentInfo = {
+                    name: 'forTupleExpr',
+                    blockType: identInfo.blockType,
+                    range: identInfo.range,
+                    evalNeeded: false,
+                };
                 traverse(tfInfo, parser, child.children[2], obj, objRanges, childIdentInfo);
                 let valueExp = obj.forTupleExpr;
                 let conditionExp = null;
@@ -224,7 +231,12 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
                 let keyExp = child.children[2].getText();
                 let obj = {};
                 let objRanges = {};
-                let childIdentInfo = { name: 'forObjectExpr', range: identInfo.range, evalNeeded: false };
+                let childIdentInfo = {
+                    name: 'forObjectExpr',
+                    blockType: identInfo.blockType,
+                    range: identInfo.range,
+                    evalNeeded: false,
+                };
                 traverse(tfInfo, parser, child.children[4], obj, objRanges, childIdentInfo);
                 let valueExp = obj.forObjectExpr;
                 let conditionExp = null;
@@ -257,7 +269,7 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
                 console.log('Error in forObjectExpr: ' + e);
             }
         } else if (ruleName === 'functionCall') {
-            const childIdentInfo = { name: 'functionCall', range: identInfo.range };
+            const childIdentInfo = { name: 'functionCall', blockType: identInfo.blockType, range: identInfo.range };
             let funcName = child.children[0].getText();
             let obj = {};
             traverse(tfInfo, parser, child, obj, ranges, childIdentInfo);
@@ -267,7 +279,7 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             configs[ident] = evalExpression(funcString, tfInfo);
             ranges[ident] = identInfo.range;
         } else if (ruleName == 'functionArgs') {
-            const childIdentInfo = { name: 'functionArgs', range: identInfo.range };
+            const childIdentInfo = { name: 'functionArgs', blockType: identInfo.blockType, range: identInfo.range };
             if (child.children) {
                 for (let j = 0; j < child.children.length; j++) {
                     let obj = { functionArgs: '' };
