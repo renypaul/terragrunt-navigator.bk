@@ -29,3 +29,7 @@ v0.4.0
 - Support for ternary operator
 - Support for "for var in" for list and maps
 - Added test case for basic validation
+
+v0.4.1
+- Improved support for for expression
+- Support for opening the repo folder from the workspace(instead of cache) if its already added

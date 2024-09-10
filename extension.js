@@ -343,17 +343,33 @@ class TerragruntNav {
                 repoUrl = `git@${url.hostname}:${urlPath}`;
             }
 
+            let repoName = urlPath.split('/').pop();
+            let repoDir = null;
+            console.log('Checking workspace folders for ' + repoName);
+            if (vscode.workspace.workspaceFolders) {
+                for (let folder of vscode.workspace.workspaceFolders) {
+                    console.log(folder.uri.fsPath);
+                    if (folder.uri.fsPath.endsWith(repoName)) {
+                        repoDir = folder.uri.fsPath;
+                        break;
+                    }
+                }
+            }
+
             let ref = match[5].trim().split('=')[1];
             let modulePath = match[4].trim();
 
-            let repoDir = path.join(this.terragruntRepoCache, urlPath);
             let clone = true;
-
-            const now = Date.now();
-            if (this.lastClonedMap.has(repoDir) && now - this.lastClonedMap.get(repoDir) < 30000) {
+            if (repoDir) {
                 clone = false;
             } else {
-                this.lastClonedMap.set(repoDir, now);
+                repoDir = path.join(this.terragruntRepoCache, urlPath);
+                const now = Date.now();
+                if (this.lastClonedMap.has(repoDir) && now - this.lastClonedMap.get(repoDir) < 30000) {
+                    clone = false;
+                } else {
+                    this.lastClonedMap.set(repoDir, now);
+                }
             }
 
             if (clone) {
