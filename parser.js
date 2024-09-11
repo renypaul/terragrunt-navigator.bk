@@ -181,6 +181,13 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             let index = obj.index;
             updateValue(tfInfo, configs, ident, index);
             childIdentInfo.evalNeeded = true;
+        } else if (ruleName === 'attrSplat') {
+            let key = child.getText().split('.').pop();
+            let splatList = evalExpression(configs[ident], tfInfo);
+            configs[ident] = splatList.map((item) => item[key]);
+        } else if (ruleName === 'fullSplat') {
+            let splatList = evalExpression(configs[ident], tfInfo);
+            configs[ident] = splatList;
         } else if (ruleName === 'forTupleExpr') {
             try {
                 let forRule = child.children[1].children.map((child) => child.getText());

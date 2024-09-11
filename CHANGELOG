@@ -33,3 +33,4 @@ v0.4.0
 v0.4.1
 - Improved support for for expression
 - Support for opening the repo folder from the workspace(instead of cache) if its already added
+- Added splat support
