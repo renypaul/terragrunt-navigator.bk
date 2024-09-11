@@ -672,10 +672,6 @@ function runEval(exp, tfInfo, processOutput = false) {
     try {
         if (typeof exp === 'string') {
             if (exp.includes('var.')) {
-                // Get the variable value from the configs
-                // Extract var.* from string like '{name:format("%s-subnet-public-%s",var.environment,availability_zone),cidr_block:cidrsubnet(var.cidr_block,ceil(log(local.max_subnets,2)),index(local.availability_zones,availability_zone)),availability_zone:availability_zone}
-                // Replace var.name.variable with tfInfo.configs.variable.default.variable if tfInfo.configs.variable.default is defined
-                // Otherwise replace var.name.variable with tfInfo.configs.variable.name.variable
                 exp = exp.replace(/(var\.)([^\. |\]}\r\n,]+)([^ |\]}\r\n,]*)/g, 'tfInfo.configs.variable.$2.default$3');
             }
             if (exp.includes('dependency.')) {
@@ -785,16 +781,19 @@ if (require.main === module) {
             tfInfo.configs.variable = Object.assign(tfInfo.configs.variable, inputs);
         }
 
-        console.log('Reading config for ' + filePath);
-        if (path.basename(filePath) === 'main.tf') {
-            let varFile = filePath.replace('main.tf', 'variables.tf');
-            if (fs.existsSync(varFile)) {
-                console.log('Reading variables for main.tf ' + varFile);
-                this.configs = read_terragrunt_config(varFile, tfInfo);
+        // Read all the .tf files in the same directory
+        let files = fs.readdirSync(baseDir);
+        files.forEach((file) => {
+            if (file.endsWith('.tf') && fille !== filePath) {
+                let tfFile = path.join(baseDir, file);
+                console.log('Reading config for ' + tfFile);
+                tfInfo.freshStart = true;
+                read_terragrunt_config(tfFile, tfInfo);
             }
-        }
+        });
         tfInfo.freshStart = true;
-        configs = read_terragrunt_config(filePath, tfInfo);
+        console.log('Reading config for ' + filePath);
+        read_terragrunt_config(filePath, tfInfo);
         console.log(JSON.stringify(tfInfo.configs, null, 2));
         if (printRange) {
             console.log(JSON.stringify(tfInfo.ranges, null, 2));

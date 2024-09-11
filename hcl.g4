@@ -69,7 +69,7 @@ exprTerm
     | forExpr
     | exprTerm index
     | exprTerm getAttr
-//    | exprTerm splat
+    | exprTerm splat
     | LPAREN expression RPAREN
     ;
 
@@ -110,9 +110,21 @@ index
     : LBRACK expression RBRACK
     ;
 
-
 getAttr
     : (index | (DOT IDENTIFIER))+
+    ;
+
+splat
+    : attrSplat
+    | fullSplat
+    ;
+
+attrSplat
+    : DOT STAR getAttr*
+    ;
+
+fullSplat
+    : LBRACK STAR RBRACK (getAttr | index)*
     ;
 
 interpolatedString
