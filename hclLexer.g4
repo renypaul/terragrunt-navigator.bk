@@ -81,7 +81,7 @@ STRING_LITERAL
     ;
 
 QUOTED_TEMPLATE
-    : QUOTE ~[\r\n]*? (DOLLAR_LCURL ~[\r\n]*? RCURL) ~[\r\n]*? QUOTE
+    : QUOTE ~[\r\n]*? (DOLLAR_LCURL ~[\r\n]*? RCURL)+ ~[\r\n]*? QUOTE
     ;
 
 NEWLINE

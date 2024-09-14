@@ -326,6 +326,10 @@ function abs(value) {
     return Math.abs(value);
 }
 
+function abspath(value) {
+    return path.resolve(globalTfInfo.path.root, value);
+}
+
 function can(exp) {
     try {
         eval(exp);
@@ -350,6 +354,15 @@ function cidrsubnet(cidr, newbits, netnum) {
 
 function concat(...lists) {
     return [].concat(...lists);
+}
+
+function coalesce(...values) {
+    for (let value of values) {
+        if (value !== null && value !== '') {
+            return value;
+        }
+    }
+    return null;
 }
 
 function contains(list, value) {
@@ -438,6 +451,10 @@ function jsondecode(value) {
     return JSON.parse(value);
 }
 
+function keys(map) {
+    return Object.keys(map);
+}
+
 function length(value) {
     if (typeof value === 'string' || Array.isArray(value)) {
         return value.length;
@@ -495,6 +512,10 @@ function reverse(list) {
     return list.slice().reverse();
 }
 
+function setproduct(...lists) {
+    return lists.reduce((acc, list) => acc.flatMap((x) => list.map((y) => x.concat([y]))), [[]]);
+}
+
 function sha1(value) {
     return crypto.createHash('sha1').update(value).digest('hex');
 }
@@ -537,6 +558,17 @@ function tomap(map) {
 
 function trimspace(value) {
     return value.trim();
+}
+
+function tryTerraform(...expressions) {
+    for (const expression of expressions) {
+        try {
+            return expression();
+        } catch (e) {
+            continue;
+        }
+    }
+    return null;
 }
 
 function upper(value) {
@@ -681,6 +713,7 @@ function runEval(exp, tfInfo, processOutput = false) {
             if (exp.includes('dependency.')) {
                 exp = exp.replace(/dependency\.([^.]+)\.outputs\./g, 'tfInfo.configs.dependency.$1.mock_outputs.');
             }
+            exp = exp.replace(/try\(/g, 'tryTerraform(');
         }
         let context = {
             path: tfInfo.path,
@@ -794,7 +827,7 @@ if (require.main === module) {
         // Read all the .tf files in the same directory
         let files = fs.readdirSync(baseDir);
         files.forEach((file) => {
-            if (file.endsWith('.tf') && fille !== filePath) {
+            if (file.endsWith('.tf') && file !== filePath) {
                 let tfFile = path.join(baseDir, file);
                 console.log('Reading config for ' + tfFile);
                 tfInfo.freshStart = true;
