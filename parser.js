@@ -8,13 +8,13 @@ const crypto = require('crypto');
 let globalTfInfo = {};
 
 function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
-    if (!node || !node.children || typeof node.children !== 'object') {
+    if (!node?.children || typeof node.children !== 'object') {
         return;
     }
 
     let ident = identInfo ? identInfo.name : null;
-    for (let i = 0; i < node.children.length; i++) {
-        const child = node.children[i];
+    for (const element of node.children) {
+        const child = element;
         let ruleName = parser.ruleNames[child.ruleIndex];
         if (ruleName === undefined) {
             continue;
@@ -42,7 +42,7 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             let rangesBlock = ranges;
             let identifierCount = 0;
             let stringLiteralCount = 0;
-            for (let j = 0; j < child.children.length; j++) {
+            for (const _ of child.children) {
                 let label = null;
                 if (child.IDENTIFIER(identifierCount)) {
                     label = child.IDENTIFIER(identifierCount).getText();
@@ -81,7 +81,7 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             const name = firstChild.getText();
             const childIdentInfo = {
                 name: name,
-                blockType: identInfo && identInfo.blockType ? identInfo.blockType : 'argument',
+                blockType: identInfo?.blockType ? identInfo.blockType : 'argument',
                 evalNeeded: false,
                 range: {
                     __range: {
@@ -142,12 +142,7 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
                 ranges[ident] = [];
                 traverse(tfInfo, parser, child, configs, ranges, identInfo);
             }
-        } else if (ruleName === 'unaryOperator') {
-            let value = child.getText();
-            updateValue(tfInfo, configs, ident, value);
-            traverse(tfInfo, parser, child, configs, ranges, identInfo);
-            identInfo.evalNeeded = true;
-        } else if (ruleName === 'binaryOperator') {
+        } else if (ruleName === 'unaryOperator' || ruleName === 'binaryOperator') {
             let value = child.getText();
             updateValue(tfInfo, configs, ident, value);
             traverse(tfInfo, parser, child, configs, ranges, identInfo);
@@ -233,11 +228,11 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             }
         } else if (ruleName === 'forObjectExpr') {
             try {
-                let forRule = child.children[1].children.map((child) => child.getText());
+                let forRule = child.children[2].children.map((child) => child.getText());
                 let key = forRule[1];
                 tfInfo.contextBuffer = {};
                 let list = evalExpression(forRule[3], tfInfo);
-                let keyExp = child.children[2].getText();
+                let keyExp = child.children[3].getText();
                 let obj = {};
                 let objRanges = {};
                 let childIdentInfo = {
@@ -246,11 +241,11 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
                     range: identInfo.range,
                     evalNeeded: false,
                 };
-                traverse(tfInfo, parser, child.children[4], obj, objRanges, childIdentInfo);
+                traverse(tfInfo, parser, child.children[5], obj, objRanges, childIdentInfo);
                 let valueExp = obj.forObjectExpr;
                 let conditionExp = null;
                 if (child.children.length > 5) {
-                    conditionExp = child.children[5].children[1].getText();
+                    conditionExp = child.children[6].children[1].getText();
                 }
 
                 let result = {};
@@ -290,15 +285,15 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
         } else if (ruleName == 'functionArgs') {
             const childIdentInfo = { name: 'functionArgs', blockType: identInfo.blockType, range: identInfo.range };
             if (child.children) {
-                for (let j = 0; j < child.children.length; j++) {
+                for (const element of child.children) {
                     let obj = { functionArgs: '' };
-                    traverse(tfInfo, parser, child.children[j], obj, ranges, childIdentInfo);
+                    traverse(tfInfo, parser, element, obj, ranges, childIdentInfo);
                     if (obj.functionArgs !== '') {
                         updateValue(tfInfo, configs, ident, obj.functionArgs, ',');
                     }
                 }
             }
-        } else if (ruleName === 'basicLiterals' || ruleName === 'variableExpr') {
+        } else if (ruleName === 'basicLiterals' || ruleName === 'variableExpr' || ruleName === 'heredocContent') {
             let value = child.getText();
             updateValue(tfInfo, configs, ident, value);
             ranges[ident] = identInfo.range;
@@ -306,7 +301,7 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             let value = child.getText() == 'true';
             updateValue(tfInfo, configs, ident, value);
             ranges[ident] = identInfo.range;
-        } else if (ruleName === 'interpolatedString') {
+        } else if (ruleName === 'quotedTemplate') {
             let value = child.getText();
             tfInfo.contextBuffer = {};
             value = value.substring(1, value.length - 1);
@@ -385,7 +380,7 @@ function floor(value) {
 }
 
 function format(formatString, ...args) {
-    return formatString.replace(/%([#vbtbodxXeEfFgGsq%])/g, (match, specifier) => {
+    return formatString.replace(/%([#vtbodxXeEfFgGsq%])/g, (match, specifier) => {
         if (specifier === '%') {
             return '%';
         }
@@ -623,7 +618,9 @@ function read_terragrunt_config(filePath, tfInfo = {}) {
     parser.buildParseTrees = true;
     const tree = parser.configFile();
 
-    //console.log(tree.toStringTree(parser.ruleNames));
+    if (tfInfo.printTree) {
+        console.log(tree.toStringTree(parser.ruleNames));
+    }
     traverse(tfInfo, parser, tree, tfInfo.configs, tfInfo.ranges, null);
 
     return tfInfo.configs;
@@ -631,10 +628,10 @@ function read_terragrunt_config(filePath, tfInfo = {}) {
 
 function path_relative_from_include(includeName = null, configs = globalTfInfo.configs) {
     let includePath = '';
-    if (!includeName) {
-        includePath = configs && configs.include ? configs.include : null;
+    if (includeName) {
+        includePath = configs?.include ? configs.include[includeName] : null;
     } else {
-        includePath = configs && configs.include ? configs.include[includeName] : null;
+        includePath = configs?.include ? configs.include : null;
     }
 
     if (!includePath || includePath === undefined) {
@@ -654,8 +651,8 @@ function evalExpression(exp, tfInfo, processOutput = false) {
     let value = exp;
     let matches = value.match(/\$\{([^}]+)\}/g);
     if (matches) {
-        for (let i = 0; i < matches.length; i++) {
-            let match = matches[i];
+        for (const element of matches) {
+            let match = element;
             let key = match.substring(2, match.length - 1);
             let val = runEval(key, tfInfo, processOutput);
             if (typeof val === 'string') {
@@ -679,7 +676,7 @@ function runEval(exp, tfInfo, processOutput = false) {
     try {
         if (typeof exp === 'string') {
             if (exp.includes('var.')) {
-                exp = exp.replace(/(var\.)([^\. |\]}\r\n,]+)([^ |\]}\r\n,]*)/g, 'tfInfo.configs.variable.$2.default$3');
+                exp = exp.replace(/(var\.)([^. |\]}\r\n,]+)([^ |\]}\r\n,]*)/g, 'tfInfo.configs.variable.$2.default$3');
             }
             if (exp.includes('dependency.')) {
                 exp = exp.replace(/dependency\.([^.]+)\.outputs\./g, 'tfInfo.configs.dependency.$1.mock_outputs.');
@@ -716,7 +713,7 @@ function runEval(exp, tfInfo, processOutput = false) {
 function processValue(value, tfInfo) {
     if (typeof value === 'string') {
         if (value === 'true' || value === 'false') {
-            value === 'true';
+            value = value === 'true';
         } else if (!isNaN(value)) {
             value = Number(value);
         } else if (value.startsWith('"') && value.endsWith('"')) {
@@ -760,22 +757,28 @@ const Terragrunt = {
 
 module.exports = Terragrunt;
 if (require.main === module) {
-    let tfInfo = {
-        freshStart: true,
-        configs: {},
-        ranges: {},
-        tfConfigCount: 0,
-    };
     try {
         let filePath = process.argv[2];
+        let printTree = false;
         let printRange = false;
         if (process.argv.length > 3) {
-            printRange = process.argv[3] === 'true';
+            printTree = process.argv[3] === 'true';
+        }
+        if (process.argv.length > 4) {
+            printRange = process.argv[4] === 'true';
         }
 
         if (!path.isAbsolute(filePath)) {
             filePath = path.resolve(filePath);
         }
+
+        let tfInfo = {
+            freshStart: true,
+            configs: {},
+            ranges: {},
+            printTree: printTree,
+            tfConfigCount: 0,
+        };
 
         // If the same directory contains input.json, read the input.json file
         let baseDir = path.dirname(filePath);

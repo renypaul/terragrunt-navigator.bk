@@ -92,7 +92,7 @@
   "scripts": {
     "build:dev": "webpack --mode none",
     "build:prod": "webpack --mode production",
-    "compile": "java -jar /usr/local/lib/antlr-4.13.2-complete.jar -Dlanguage=JavaScript hcl.g4 -o generated -Xexact-output-dir -visitor && npx babel generated --out-dir generated-cjs",
+    "compile": "java -jar /usr/local/lib/antlr-4.13.2-complete.jar -Dlanguage=JavaScript hclLexer.g4 hclParser.g4 -o generated -Xexact-output-dir -visitor && npx babel generated --out-dir generated-cjs",
     "test": "node ./parser.js tests/env/region/cluster/terragrunt.hcl"
   },
   "version": "0.4.1"
