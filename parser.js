@@ -1,11 +1,7 @@
-const antlr4 = require('antlr4');
-const hclLexer = require('./generated-cjs/hclLexer').default;
-const hclParser = require('./generated-cjs/hclParser').default;
-const fs = require('fs');
+const Terragrunt = require('./terragrunt');
+const Terraform = require('./terraform');
 const path = require('path');
-const crypto = require('crypto');
-
-let globalTfInfo = {};
+const jsep = require('jsep');
 
 function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
     if (!node?.children || typeof node.children !== 'object') {
@@ -322,359 +318,6 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
     }
 }
 
-function abs(value) {
-    return Math.abs(value);
-}
-
-function abspath(value) {
-    return path.resolve(globalTfInfo.path.root, value);
-}
-
-function can(exp) {
-    try {
-        eval(exp);
-        return true;
-    } catch (e) {
-        return false;
-    }
-}
-
-function ceil(value) {
-    return Math.ceil(value);
-}
-
-function cidrsubnet(cidr, newbits, netnum) {
-    let parts = cidr.split('/');
-    let ip = parts[0];
-    let mask = parseInt(parts[1], 10);
-    let newmask = mask + newbits;
-    let newcidr = ip + '/' + newmask;
-    return newcidr;
-}
-
-function concat(...lists) {
-    return [].concat(...lists);
-}
-
-function coalesce(...values) {
-    for (let value of values) {
-        if (value !== null && value !== '') {
-            return value;
-        }
-    }
-    return null;
-}
-
-function contains(list, value) {
-    return list.includes(value);
-}
-
-function endswith(value, suffix) {
-    return value.endsWith(suffix);
-}
-
-function file(filePath) {
-    if (!path.isAbsolute(filePath)) {
-        filePath = path.resolve(globalTfInfo.path.root, filePath);
-    }
-    if (!fs.existsSync(filePath)) {
-        return 'FileNotFound';
-    }
-    return fs.readFileSync(filePath, 'utf8');
-}
-
-function filebase64sha256(filePath) {
-    let content = file(filePath);
-    return crypto.createHash('sha256').update(content).digest('base64');
-}
-
-function floor(value) {
-    return Math.floor(value);
-}
-
-function format(formatString, ...args) {
-    return formatString.replace(/%([#vtbodxXeEfFgGsq%])/g, (match, specifier) => {
-        if (specifier === '%') {
-            return '%';
-        }
-        const value = args.shift();
-        switch (specifier) {
-            case 'v':
-                return String(value);
-            case '#v':
-                return JSON.stringify(value);
-            case 't':
-                return Boolean(value).toString();
-            case 'b':
-                return parseInt(value, 10).toString(2);
-            case 'd':
-                return parseInt(value, 10).toString(10);
-            case 'o':
-                return parseInt(value, 10).toString(8);
-            case 'x':
-                return parseInt(value, 10).toString(16);
-            case 'X':
-                return parseInt(value, 10).toString(16).toUpperCase();
-            case 'e':
-                return Number(value).toExponential();
-            case 'E':
-                return Number(value).toExponential().toUpperCase();
-            case 'f':
-                return Number(value).toFixed();
-            case 'g':
-                return Number(value).toPrecision();
-            case 'G':
-                return Number(value).toPrecision().toUpperCase();
-            case 's':
-                return String(value);
-            case 'q':
-                return JSON.stringify(String(value));
-            default:
-                return match;
-        }
-    });
-}
-
-function index(list, value) {
-    return list.indexOf(value);
-}
-
-function join(separator, list) {
-    return list.join(separator);
-}
-
-function jsonencode(value) {
-    return JSON.stringify(value);
-}
-
-function jsondecode(value) {
-    return JSON.parse(value);
-}
-
-function keys(map) {
-    return Object.keys(map);
-}
-
-function length(value) {
-    if (typeof value === 'string' || Array.isArray(value)) {
-        return value.length;
-    } else if (value instanceof Map) {
-        return value.size;
-    } else if (typeof value === 'object' && value !== null) {
-        return Object.keys(value).length;
-    } else {
-        console.log('Unsupported type for size function');
-        return 0;
-    }
-}
-
-function log(value) {
-    return Math.log(value);
-}
-
-function lookup(map, key, defaultValue = null) {
-    return map.hasOwnProperty(key) ? map[key] : defaultValue;
-}
-
-function lower(value) {
-    return value.toLowerCase();
-}
-
-function max(...values) {
-    return Math.max(...values);
-}
-
-function merge(...maps) {
-    return Object.assign({}, ...maps);
-}
-
-function min(...values) {
-    return Math.min(...values);
-}
-
-function parseint(value, base = 10) {
-    return parseInt(value, base);
-}
-
-function pow(base, exponent) {
-    return Math.pow(base, exponent);
-}
-
-function range(start, end) {
-    return Array.from({ length: end - start }, (_, i) => i + start);
-}
-
-function replace(value, search, replacement) {
-    return value.split(search).join(replacement);
-}
-
-function reverse(list) {
-    return list.slice().reverse();
-}
-
-function setproduct(...lists) {
-    return lists.reduce((acc, list) => acc.flatMap((x) => list.map((y) => x.concat([y]))), [[]]);
-}
-
-function sha1(value) {
-    return crypto.createHash('sha1').update(value).digest('hex');
-}
-
-function signum(value) {
-    return Math.sign(value);
-}
-
-function sort(list) {
-    return list.slice().sort();
-}
-
-function split(separator, value) {
-    return value.split(separator);
-}
-
-function sqrt(value) {
-    return Math.sqrt(value);
-}
-
-function startswith(value, prefix) {
-    return value.startsWith(prefix);
-}
-
-function strlen(value) {
-    return value.length;
-}
-
-function substr(value, start, length) {
-    return value.substr(start, length);
-}
-
-function timestamp() {
-    return new Date().toISOString();
-}
-
-function tomap(map) {
-    return map;
-}
-
-function trimspace(value) {
-    return value.trim();
-}
-
-function tryTerraform(...expressions) {
-    for (const expression of expressions) {
-        try {
-            return expression();
-        } catch (e) {
-            continue;
-        }
-    }
-    return null;
-}
-
-function upper(value) {
-    return value.toUpperCase();
-}
-
-function uuid() {
-    return crypto.randomBytes(16).toString('hex');
-}
-
-function get_aws_account_id() {
-    if (process.env.AWS_ACCOUNT_ID) {
-        return process.env.AWS_ACCOUNT_ID;
-    }
-
-    return '123456789012';
-}
-
-function find_in_parent_folders(fileName = null) {
-    if (fileName === null) {
-        fileName = 'terragrunt.hcl';
-    }
-    let currentDir = path.dirname(globalTfInfo.path.root);
-    while (currentDir !== '/') {
-        let filePath = path.join(currentDir, fileName);
-        if (fs.existsSync(filePath)) {
-            return filePath;
-        }
-        currentDir = path.dirname(currentDir);
-    }
-    return null;
-}
-
-function read_terragrunt_config(filePath, tfInfo = {}) {
-    let configStartDir = null;
-    console.log('Reading file:', filePath);
-    if (path.isAbsolute(filePath)) {
-        configStartDir = path.dirname(filePath);
-    } else if (!globalTfInfo.path.root) {
-        throw new Error('startDir is not provided');
-    } else {
-        filePath = path.resolve(globalTfInfo.path.root, filePath);
-    }
-
-    if (tfInfo.freshStart) {
-        if (tfInfo.configs === undefined) {
-            tfInfo.configs = {};
-        }
-        if (tfInfo.ranges === undefined) {
-            tfInfo.ranges = {};
-        }
-        tfInfo.path = {
-            module: configStartDir,
-            root: configStartDir,
-            cwd: configStartDir,
-        };
-        tfInfo.terraform = {
-            workspace: 'default',
-        };
-        tfInfo.contextBuffer = null;
-        tfInfo.tfConfigCount = 0;
-        globalTfInfo = tfInfo;
-        tfInfo.freshStart = false;
-    } else {
-        tfInfo.path = globalTfInfo.path;
-        tfInfo.terraform = globalTfInfo.terraform;
-        tfInfo.tfConfigCount = globalTfInfo.tfConfigCount;
-        tfInfo.contextBuffer = null;
-        tfInfo.configs = {};
-        tfInfo.ranges = {};
-    }
-    tfInfo.tfConfigCount++;
-
-    const input = fs.readFileSync(filePath, 'utf8');
-    const chars = new antlr4.InputStream(input);
-    const lexer = new hclLexer(chars);
-    const tokens = new antlr4.CommonTokenStream(lexer);
-    const parser = new hclParser(tokens);
-    parser.buildParseTrees = true;
-    const tree = parser.configFile();
-
-    if (tfInfo.printTree) {
-        console.log(tree.toStringTree(parser.ruleNames));
-    }
-    traverse(tfInfo, parser, tree, tfInfo.configs, tfInfo.ranges, null);
-
-    return tfInfo.configs;
-}
-
-function path_relative_from_include(includeName = null, configs = globalTfInfo.configs) {
-    let includePath = '';
-    if (includeName) {
-        includePath = configs?.include ? configs.include[includeName] : null;
-    } else {
-        includePath = configs?.include ? configs.include : null;
-    }
-
-    if (!includePath || includePath === undefined) {
-        return null;
-    }
-
-    let includeDir = path.dirname(includePath);
-    let relativePath = path.relative(includeDir, globalTfInfo.path.root);
-    return relativePath;
-}
-
 function evalExpression(exp, tfInfo, processOutput = false) {
     if (typeof exp !== 'string') {
         return exp;
@@ -722,14 +365,19 @@ function runEval(exp, tfInfo, processOutput = false) {
             module: tfInfo.configs.module,
             data: tfInfo.configs.data,
             local: tfInfo.configs.locals,
+            tfInfo: tfInfo,
+            traverse: traverse,
         };
+        context = Object.assign(context, Terragrunt);
+        context = Object.assign(context, Terraform);
         if (tfInfo.contextBuffer) {
             context = Object.assign(context, tfInfo.contextBuffer);
         }
+
         //console.log("Evaluating expression: " + exp);
         value = (function () {
             with (context) {
-                let val = eval(exp);
+                let val = evaluateExpression(exp, context);
                 val = quote(val);
                 return val;
             }
@@ -752,14 +400,113 @@ function processValue(value, tfInfo) {
         } else if (value.startsWith('"') && value.endsWith('"')) {
             value = value.substring(1, value.length - 1);
         } else if (value.startsWith('./') || value.startsWith('../')) {
-            if (tfInfo.path !== undefined && globalTfInfo.path.root !== undefined) {
-                value = path.resolve(globalTfInfo.path.root, value);
+            if (tfInfo.path !== undefined && this.path.root !== undefined) {
+                value = path.resolve(this.path.root, value);
             }
         }
     } else if (value === undefined) {
         value = 'undefined';
     }
     return value;
+}
+
+function evaluateAst(node, context) {
+    switch (node.type) {
+        case 'Literal':
+            return node.value;
+        case 'Identifier':
+            if (context.hasOwnProperty(node.name)) {
+                return context[node.name];
+            } else {
+                throw new Error(`Undefined identifier: ${node.name}`);
+            }
+        case 'BinaryExpression':
+            return evaluateBinaryExpression(node, context);
+        case 'UnaryExpression':
+            return evaluateUnaryExpression(node, context);
+        case 'MemberExpression':
+            return evaluateAst(node.object, context)[node.property.name];
+        case 'CallExpression':
+            return evaluateCallExpression(node, context);
+        case 'ConditionalExpression':
+            return evaluateAst(node.test, context)
+                ? evaluateAst(node.consequent, context)
+                : evaluateAst(node.alternate, context);
+        case 'ArrayExpression':
+            return node.elements.map((n) => evaluateAst(n, context));
+        case 'ObjectExpression':
+            return node.properties.reduce((obj, prop) => {
+                obj[prop.key.name] = evaluateAst(prop.value, context);
+                return obj;
+            }, {});
+        case 'Compound':
+            return node.body.map((n) => evaluateAst(n, context)).pop();
+        default:
+            throw new Error(`Unsupported node type: ${node.type}`);
+    }
+}
+
+function evaluateBinaryExpression(node, context) {
+    const left = evaluateAst(node.left, context);
+    const right = evaluateAst(node.right, context);
+    switch (node.operator) {
+        case '+':
+            return left + right;
+        case '-':
+            return left - right;
+        case '*':
+            return left * right;
+        case '/':
+            return left / right;
+        case '%':
+            return left % right;
+        case '<':
+            return left < right;
+        case '>':
+            return left > right;
+        case '<=':
+            return left <= right;
+        case '>=':
+            return left >= right;
+        case '==':
+            return left == right;
+        case '!=':
+            return left != right;
+        case '&&':
+            return left && right;
+        case '||':
+            return left || right;
+        default:
+            throw new Error(`Unsupported operator: ${node.operator}`);
+    }
+}
+
+function evaluateUnaryExpression(node, context) {
+    const argument = evaluateAst(node.argument, context);
+    switch (node.operator) {
+        case '+':
+            return +argument;
+        case '-':
+            return -argument;
+        case '!':
+            return !argument;
+        default:
+            throw new Error(`Unsupported operator: ${node.operator}`);
+    }
+}
+
+function evaluateCallExpression(node, context) {
+    const func = evaluateAst(node.callee, context);
+    const args = node.arguments.map((arg) => evaluateAst(arg, context));
+    if (typeof func !== 'function') {
+        throw new Error(`Callee is not a function: ${node.callee.name}`);
+    }
+    return func.apply(context, args);
+}
+
+function evaluateExpression(exp, context) {
+    const ast = jsep(exp);
+    return evaluateAst(ast, context);
 }
 
 function quote(value) {
@@ -781,68 +528,10 @@ function updateValue(tfInfo, obj, key, value, separator = '') {
     }
 }
 
-const Terragrunt = {
-    find_in_parent_folders: find_in_parent_folders,
-    read_terragrunt_config: read_terragrunt_config,
+const TerragruntParser = {
+    traverse: traverse,
     evalExpression: evalExpression,
     processValue: processValue,
 };
 
-module.exports = Terragrunt;
-if (require.main === module) {
-    try {
-        let filePath = process.argv[2];
-        let printTree = false;
-        let printRange = false;
-        if (process.argv.length > 3) {
-            printTree = process.argv[3] === 'true';
-        }
-        if (process.argv.length > 4) {
-            printRange = process.argv[4] === 'true';
-        }
-
-        if (!path.isAbsolute(filePath)) {
-            filePath = path.resolve(filePath);
-        }
-
-        let tfInfo = {
-            freshStart: true,
-            configs: {},
-            ranges: {},
-            printTree: printTree,
-            tfConfigCount: 0,
-        };
-
-        // If the same directory contains input.json, read the input.json file
-        let baseDir = path.dirname(filePath);
-        let inputJson = path.join(baseDir, 'input.json');
-        if (fs.existsSync(inputJson)) {
-            tfInfo.configs.variable = {};
-            console.log('Reading input file: ' + inputJson);
-            let input = fs.readFileSync(inputJson, 'utf8');
-            let inputs = JSON.parse(input);
-            tfInfo.configs.variable = Object.assign(tfInfo.configs.variable, inputs);
-        }
-
-        // Read all the .tf files in the same directory
-        let files = fs.readdirSync(baseDir);
-        files.forEach((file) => {
-            if (file.endsWith('.tf') && file !== filePath) {
-                let tfFile = path.join(baseDir, file);
-                console.log('Reading config for ' + tfFile);
-                tfInfo.freshStart = true;
-                read_terragrunt_config(tfFile, tfInfo);
-            }
-        });
-        tfInfo.freshStart = true;
-        console.log('Reading config for ' + filePath);
-        read_terragrunt_config(filePath, tfInfo);
-        console.log(JSON.stringify(tfInfo.configs, null, 2));
-        if (printRange) {
-            console.log(JSON.stringify(tfInfo.ranges, null, 2));
-        }
-    } catch (e) {
-        console.log('Failed to read terragrunt config: ' + e);
-        console.log(tfInfo.configs);
-    }
-}
+module.exports = TerragruntParser;

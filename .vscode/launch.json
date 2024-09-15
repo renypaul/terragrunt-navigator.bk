@@ -22,7 +22,7 @@
       "skipFiles": [
         "<node_internals>/**"
       ],
-      "program": "${workspaceFolder}/parser.js",
+      "program": "${workspaceFolder}/terragrunt.js",
       "args": [
         //"tests/env/region/cluster/terragrunt.hcl"
         "/root/op.hcl"

@@ -1,10 +1,18 @@
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+
 function abs(value) {
     return Math.abs(value);
 }
 
-function can(expression) {
+function abspath(value) {
+    return path.resolve(this.path.root, value);
+}
+
+function can(exp) {
     try {
-        eval(expression);
+        eval(exp);
         return true;
     } catch (e) {
         return false;
@@ -15,8 +23,26 @@ function ceil(value) {
     return Math.ceil(value);
 }
 
+function cidrsubnet(cidr, newbits, netnum) {
+    let parts = cidr.split('/');
+    let ip = parts[0];
+    let mask = parseInt(parts[1], 10);
+    let newmask = mask + newbits;
+    let newcidr = ip + '/' + newmask;
+    return newcidr;
+}
+
 function concat(...lists) {
     return [].concat(...lists);
+}
+
+function coalesce(...values) {
+    for (let value of values) {
+        if (value !== null && value !== '') {
+            return value;
+        }
+    }
+    return null;
 }
 
 function contains(list, value) {
@@ -29,7 +55,7 @@ function endswith(value, suffix) {
 
 function file(filePath) {
     if (!path.isAbsolute(filePath)) {
-        filePath = path.resolve(globalTfInfo.startDir, filePath);
+        filePath = path.resolve(this.path.root, filePath);
     }
     if (!fs.existsSync(filePath)) {
         return 'FileNotFound';
@@ -47,7 +73,7 @@ function floor(value) {
 }
 
 function format(formatString, ...args) {
-    return formatString.replace(/%([#vbtbodxXeEfFgGsq%])/g, (match, specifier) => {
+    return formatString.replace(/%([#vtbodxXeEfFgGsq%])/g, (match, specifier) => {
         if (specifier === '%') {
             return '%';
         }
@@ -89,6 +115,10 @@ function format(formatString, ...args) {
     });
 }
 
+function index(list, value) {
+    return list.indexOf(value);
+}
+
 function join(separator, list) {
     return list.join(separator);
 }
@@ -101,8 +131,25 @@ function jsondecode(value) {
     return JSON.parse(value);
 }
 
+function keys(map) {
+    return Object.keys(map);
+}
+
 function length(value) {
-    return value.length;
+    if (typeof value === 'string' || Array.isArray(value)) {
+        return value.length;
+    } else if (value instanceof Map) {
+        return value.size;
+    } else if (typeof value === 'object' && value !== null) {
+        return Object.keys(value).length;
+    } else {
+        console.log('Unsupported type for size function');
+        return 0;
+    }
+}
+
+function log(value) {
+    return Math.log(value);
 }
 
 function lookup(map, key, defaultValue = null) {
@@ -145,6 +192,10 @@ function reverse(list) {
     return list.slice().reverse();
 }
 
+function setproduct(...lists) {
+    return lists.reduce((acc, list) => acc.flatMap((x) => list.map((y) => x.concat([y]))), [[]]);
+}
+
 function sha1(value) {
     return crypto.createHash('sha1').update(value).digest('hex');
 }
@@ -181,8 +232,23 @@ function timestamp() {
     return new Date().toISOString();
 }
 
+function tomap(map) {
+    return map;
+}
+
 function trimspace(value) {
     return value.trim();
+}
+
+function tryTerraform(...expressions) {
+    for (const expression of expressions) {
+        try {
+            return expression();
+        } catch (e) {
+            continue;
+        }
+    }
+    return null;
 }
 
 function upper(value) {
@@ -193,29 +259,27 @@ function uuid() {
     return crypto.randomBytes(16).toString('hex');
 }
 
-function get_aws_account_id() {
-    if (process.env.AWS_ACCOUNT_ID) {
-        return process.env.AWS_ACCOUNT_ID;
-    }
-
-    return '123456789012';
-}
-
-exports.module = {
+const Terraform = {
     abs,
+    abspath,
     can,
     ceil,
+    cidrsubnet,
     concat,
+    coalesce,
     contains,
     endswith,
     file,
     filebase64sha256,
     floor,
     format,
+    index,
     join,
     jsonencode,
     jsondecode,
+    keys,
     length,
+    log,
     lookup,
     lower,
     max,
@@ -226,6 +290,7 @@ exports.module = {
     range,
     replace,
     reverse,
+    setproduct,
     sha1,
     signum,
     sort,
@@ -235,11 +300,11 @@ exports.module = {
     strlen,
     substr,
     timestamp,
+    tomap,
     trimspace,
+    tryTerraform,
     upper,
     uuid,
-    get_aws_account_id,
-    find_in_parent_folders,
-    read_terragrunt_config,
-    path_relative_from_include,
 };
+
+module.exports = Terraform;
