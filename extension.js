@@ -4,8 +4,8 @@ const fs = require('fs');
 const os = require('os');
 const console = require('console');
 const { execSync } = require('child_process');
-const TerragruntParser = require('./parser');
-const terragrunt = require('./terragrunt');
+const Parser = require('./parser');
+const Terragrunt = require('./terragrunt');
 
 let linkDecator = vscode.window.createTextEditorDecorationType({
     textDecoration: 'underline',
@@ -209,8 +209,8 @@ class TerragruntNav {
 
                 for (const element of match) {
                     let str = element.trim();
-                    let value = TerragruntParser.evalExpression(str, this.tfInfo);
-                    value = TerragruntParser.processValue(value, this.tfInfo);
+                    let value = Parser.evalExpression(str, this.tfInfo);
+                    value = Parser.processValue(value, this.tfInfo);
                     let range = new vscode.Range(
                         line,
                         textLine.text.indexOf(element),
@@ -263,11 +263,11 @@ class TerragruntNav {
                 if (fs.existsSync(varFile)) {
                     console.log('Reading variables for main.tf ' + varFile);
                     this.tfInfo.freshStart = true;
-                    terragrunt.read_terragrunt_config(varFile, this.tfInfo);
+                    Terragrunt.read_terragrunt_config(varFile, this.tfInfo);
                 }
             }
             this.tfInfo.freshStart = true;
-            terragrunt.read_terragrunt_config(vscode.window.activeTextEditor.document.uri.fsPath, this.tfInfo);
+            Terragrunt.read_terragrunt_config(vscode.window.activeTextEditor.document.uri.fsPath, this.tfInfo);
         } catch (e) {
             console.log('Failed to read terragrunt config: ' + e);
         }
@@ -281,7 +281,7 @@ class TerragruntNav {
             let func = match[2].trim();
             let funcArgs = match[3].trim();
             if (func === 'find_in_parent_folders') {
-                srcPath = terragrunt.find_in_parent_folders(funcArgs);
+                srcPath = Terragrunt.find_in_parent_folders(funcArgs);
                 if (!srcPath) {
                     return null;
                 }
@@ -295,8 +295,8 @@ class TerragruntNav {
                 srcPath = srcPath.replace(replacement.find, replacement.replace);
             }
         }
-        srcPath = TerragruntParser.evalExpression(srcPath, this.tfInfo);
-        srcPath = TerragruntParser.processValue(srcPath, this.tfInfo);
+        srcPath = Parser.evalExpression(srcPath, this.tfInfo);
+        srcPath = Parser.processValue(srcPath, this.tfInfo);
 
         return { path: srcPath, range };
     }

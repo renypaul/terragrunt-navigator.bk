@@ -28,6 +28,8 @@ function find_in_parent_folders(fileName = null) {
 }
 
 function read_terragrunt_config(filePath, tfInfo = {}) {
+    const TerragruntParser = require('./parser');
+
     let configStartDir = null;
     console.log('Reading file:', filePath);
     if (path.isAbsolute(filePath)) {
@@ -115,7 +117,6 @@ const Terragrunt = {
 };
 
 module.exports = Terragrunt;
-const TerragruntParser = require('./parser');
 
 if (require.main === module) {
     let tfInfo = {
@@ -160,7 +161,7 @@ if (require.main === module) {
                 let tfFile = path.join(baseDir, file);
                 console.log('Reading config for ' + tfFile);
                 tfInfo.freshStart = true;
-                TerragruntParser.evalExpression('read_terragrunt_config(tfFile, tfInfo)', tfInfo);
+                read_terragrunt_config(tfFile, tfInfo);
             }
         });
         tfInfo.freshStart = true;

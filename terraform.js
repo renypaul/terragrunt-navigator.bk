@@ -148,6 +148,10 @@ function length(value) {
     }
 }
 
+function list(values) {
+    return [values];
+}
+
 function log(value) {
     return Math.log(value);
 }
@@ -170,6 +174,10 @@ function merge(...maps) {
 
 function min(...values) {
     return Math.min(...values);
+}
+
+function object(values) {
+    return values;
 }
 
 function parseint(value, base = 10) {
@@ -202,6 +210,10 @@ function sha1(value) {
 
 function signum(value) {
     return Math.sign(value);
+}
+
+function slice(list, start, end) {
+    return list.slice(start, end);
 }
 
 function sort(list) {
@@ -279,12 +291,14 @@ const Terraform = {
     jsondecode,
     keys,
     length,
+    list,
     log,
     lookup,
     lower,
     max,
     merge,
     min,
+    object,
     parseint,
     pow,
     range,
@@ -293,6 +307,7 @@ const Terraform = {
     setproduct,
     sha1,
     signum,
+    slice,
     sort,
     split,
     sqrt,

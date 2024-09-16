@@ -88,13 +88,18 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
                     },
                 },
             };
-            traverse(tfInfo, parser, child, configs, ranges, childIdentInfo);
-            ident = childIdentInfo.name;
-            if (childIdentInfo.evalNeeded) {
-                tfInfo.contextBuffer = {};
-                configs[ident] = evalExpression(configs[ident], tfInfo);
+
+            try {
+                traverse(tfInfo, parser, child, configs, ranges, childIdentInfo);
+                ident = childIdentInfo.name;
+                if (childIdentInfo.evalNeeded) {
+                    tfInfo.contextBuffer = {};
+                    configs[ident] = evalExpression(configs[ident], tfInfo);
+                }
+                configs[ident] = processValue(configs[ident], tfInfo);
+            } catch (e) {
+                console.log('Error in argument: ' + e);
             }
-            configs[ident] = processValue(configs[ident], tfInfo);
         } else if (ruleName === 'expression') {
             let obj = {};
             let objRanges = {};
@@ -274,8 +279,13 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             let obj = {};
             traverse(tfInfo, parser, child, obj, ranges, childIdentInfo);
             let args = obj.functionCall !== undefined ? obj.functionCall : '';
-            let funcString = funcName + '(' + args + ')';
-            tfInfo.contextBuffer = { args: args };
+            let funcString = funcName;
+            if (typeof args === 'string' && args.includes(',')) {
+                funcString += '(' + args + ')';
+            } else {
+                funcString += '(args)';
+                tfInfo.contextBuffer = { args: args };
+            }
             configs[ident] = evalExpression(funcString, tfInfo);
             ranges[ident] = identInfo.range;
         } else if (ruleName == 'functionArgs') {
@@ -374,14 +384,10 @@ function runEval(exp, tfInfo, processOutput = false) {
             context = Object.assign(context, tfInfo.contextBuffer);
         }
 
-        //console.log("Evaluating expression: " + exp);
-        value = (function () {
-            with (context) {
-                let val = evaluateExpression(exp, context);
-                val = quote(val);
-                return val;
-            }
-        })();
+        value = jsepEval(exp, context);
+        if (typeof value === 'string') {
+            value = quote(value);
+        }
         if (processOutput) {
             value = processValue(value, tfInfo);
         }
@@ -400,8 +406,8 @@ function processValue(value, tfInfo) {
         } else if (value.startsWith('"') && value.endsWith('"')) {
             value = value.substring(1, value.length - 1);
         } else if (value.startsWith('./') || value.startsWith('../')) {
-            if (tfInfo.path !== undefined && this.path.root !== undefined) {
-                value = path.resolve(this.path.root, value);
+            if (tfInfo.path?.root !== undefined) {
+                value = path.resolve(tfInfo.path.root, value);
             }
         }
     } else if (value === undefined) {
@@ -504,7 +510,7 @@ function evaluateCallExpression(node, context) {
     return func.apply(context, args);
 }
 
-function evaluateExpression(exp, context) {
+function jsepEval(exp, context) {
     const ast = jsep(exp);
     return evaluateAst(ast, context);
 }
