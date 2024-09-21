@@ -101,7 +101,7 @@ fragment HEX
     ;
 
 WS
-    : [ \t]+ -> skip
+    : [ \t\r\n]+ -> skip
     ;
 
 COMMENT

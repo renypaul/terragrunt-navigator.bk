@@ -229,11 +229,11 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             }
         } else if (ruleName === 'forObjectExpr') {
             try {
-                let forRule = child.children[2].children.map((child) => child.getText());
+                let forRule = child.children[1].children.map((child) => child.getText());
                 let key = forRule[1];
                 tfInfo.contextBuffer = {};
                 let list = evalExpression(forRule[3], tfInfo);
-                let keyExp = child.children[3].getText();
+                let keyExp = child.children[2].getText();
                 let obj = {};
                 let objRanges = {};
                 let childIdentInfo = {
@@ -242,11 +242,11 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
                     range: identInfo.range,
                     evalNeeded: false,
                 };
-                traverse(tfInfo, parser, child.children[5], obj, objRanges, childIdentInfo);
+                traverse(tfInfo, parser, child.children[4], obj, objRanges, childIdentInfo);
                 let valueExp = obj.forObjectExpr;
                 let conditionExp = null;
-                if (child.children.length > 5) {
-                    conditionExp = child.children[6].children[1].getText();
+                if (child.children.length > 4) {
+                    conditionExp = child.children[5].children[1].getText();
                 }
 
                 let result = {};
