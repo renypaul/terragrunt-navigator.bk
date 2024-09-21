@@ -64,11 +64,11 @@ collectionValue
     ;
 
 tuple
-    : LBRACK NEWLINE? (expression ((COMMA | NEWLINE) NEWLINE? expression)* COMMA?)? NEWLINE? RBRACK
+    : LBRACK NEWLINE? (expression (COMMA | NEWLINE)* NEWLINE?)* NEWLINE? RBRACK
     ;
 
 object
-    : LCURL NEWLINE? ((objectElement ((COMMA | NEWLINE) NEWLINE? objectElement)* COMMA?)?) NEWLINE? RCURL
+    : LCURL NEWLINE? (objectElement (COMMA | NEWLINE)* NEWLINE?)* NEWLINE? RCURL
     ;
 
 objectElement

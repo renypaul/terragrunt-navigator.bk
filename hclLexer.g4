@@ -27,6 +27,10 @@ lexer grammar hclLexer;
         }
         return strArr.join('') === this.heredocStartIdentifier;
     };
+
+    this.isNewLine = function() {
+        return this._input.LA(1) === '\n'.charCodeAt(0);
+    }
 }
 
 QUOTE: '"';
