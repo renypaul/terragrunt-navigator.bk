@@ -192,6 +192,10 @@ function range(start, end) {
     return Array.from({ length: end - start }, (_, i) => i + start);
 }
 
+function regex(pattern, value) {
+    return new RegExp(pattern).test(value);
+}
+
 function replace(value, search, replacement) {
     return value.split(search).join(replacement);
 }
@@ -242,6 +246,10 @@ function substr(value, start, length) {
 
 function timestamp() {
     return new Date().toISOString();
+}
+
+function tolist(list) {
+    return list;
 }
 
 function tomap(map) {
@@ -302,6 +310,7 @@ const Terraform = {
     parseint,
     pow,
     range,
+    regex,
     replace,
     reverse,
     setproduct,
@@ -316,6 +325,7 @@ const Terraform = {
     substr,
     timestamp,
     tomap,
+    tolist,
     trimspace,
     tryTerraform,
     upper,
