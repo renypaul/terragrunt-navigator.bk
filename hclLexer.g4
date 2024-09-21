@@ -76,12 +76,12 @@ NUMBER
     : DECIMAL+ (DOT DECIMAL+)? (EXPMARK DECIMAL+)?
     ;
 
-STRING_LITERAL
-    : QUOTE (~[\r\n$"] | '$' ~[{])*? QUOTE
-    ;
-
 QUOTED_TEMPLATE
     : QUOTE ~[\r\n]*? (DOLLAR_LCURL ~[\r\n]*? RCURL)+ ~[\r\n]*? QUOTE
+    ;
+
+STRING_LITERAL
+    : QUOTE (~[\r\n"])* QUOTE
     ;
 
 NEWLINE
@@ -96,7 +96,7 @@ fragment EXPMARK
     : [eE] [+-]?
     ;
 
-HEX
+fragment HEX
     : [0-9a-fA-F]
     ;
 

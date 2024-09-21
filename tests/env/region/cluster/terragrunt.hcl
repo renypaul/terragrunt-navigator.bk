@@ -16,6 +16,13 @@ locals {
     { c = 5 },
     { d = 7 }
   ]
+
+  regex_string  = "^(?:[A-Za-z0-9+/]{2})*(?:[A-Za-z0-9+/][NSD]==|[A-Za-z0-9+/]{2}[AFASDASDcgkosw048]=)?$"
+  quoted_string = "prefix-${local.type}-suffix"
+  here_doc      = <<EOF
+This is heredoc
+Its multiline
+EOF
   primary       = format("%s-%s-us", local.type, local.zone1)
   secondary     = format("%s-%s-us", local.type, local.zone2)
   add_failover  = true

@@ -280,7 +280,7 @@ function traverse(tfInfo, parser, node, configs, ranges, identInfo) {
             traverse(tfInfo, parser, child, obj, ranges, childIdentInfo);
             let args = obj.functionCall !== undefined ? obj.functionCall : '';
             let funcString = funcName;
-            if (typeof args === 'string' && args.includes(',')) {
+            if (typeof args === 'string' && (args.length == 0 || args.includes(','))) {
                 funcString += '(' + args + ')';
             } else {
                 funcString += '(args)';
