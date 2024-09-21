@@ -49,6 +49,9 @@ EOF
   ]
   names      = ["Alice", "Bob", "Charlie"]
   kms_key_id = var.kms_key_id == null ? module.kms_key[10].key_id : var.kms_key_id
+  region_file = "region.hcl"
+  region_vars1 = read_terragrunt_config("region.hcl")
+  region_vars2 = read_terragrunt_config(local.region_file)
 }
 
 output "greetings" {
