@@ -1,9 +1,10 @@
-Reading config for TERRAGRUNT_NAVIGATOR_SRC_DIR/tests/env/region/cluster/terragrunt.hcl
 Reading file: TERRAGRUNT_NAVIGATOR_SRC_DIR/tests/env/region/cluster/terragrunt.hcl
 Reading file: TERRAGRUNT_NAVIGATOR_SRC_DIR/tests/env/vpc.hcl
 Failed to evaluate expression: tfInfo.configs.variable.kms_key_id==null.default Error: TypeError: Cannot read properties of undefined (reading 'kms_key_id')
 Failed to evaluate expression: module.kms_key[10].key_id Error: TypeError: Cannot read properties of undefined (reading 'kms_key')
 Failed to evaluate expression: tfInfo.configs.variable.kms_key_id.default Error: TypeError: Cannot read properties of undefined (reading 'kms_key_id')
+Reading file: TERRAGRUNT_NAVIGATOR_SRC_DIR/tests/env/region/region.hcl
+Reading file: TERRAGRUNT_NAVIGATOR_SRC_DIR/tests/env/region/region.hcl
 {
   "terraform": {
     "source": "git::https://github.com/terraform-aws-modules/terraform-aws-eks.git//modules/aws-auth?ref=v20.24.0"
@@ -76,7 +77,18 @@ Failed to evaluate expression: tfInfo.configs.variable.kms_key_id.default Error:
       "Bob",
       "Charlie"
     ],
-    "kms_key_id": "module.kms_key[10].key_id"
+    "kms_key_id": "module.kms_key[10].key_id",
+    "region_file": "region.hcl",
+    "region_vars1": {
+      "locals": {
+        "region": "us-east-1"
+      }
+    },
+    "region_vars2": {
+      "locals": {
+        "region": "us-east-1"
+      }
+    }
   },
   "output": {
     "greetings": {

@@ -28,8 +28,6 @@ function find_in_parent_folders(fileName = null) {
 }
 
 function read_terragrunt_config(filePath, tfInfo = {}) {
-    const TerragruntParser = require('./parser');
-
     let configStartDir = null;
     console.log('Reading file:', filePath);
     if (path.isAbsolute(filePath)) {
@@ -40,41 +38,23 @@ function read_terragrunt_config(filePath, tfInfo = {}) {
         filePath = path.resolve(this.path.root, filePath);
     }
 
-    if (tfInfo.freshStart) {
-        if (tfInfo.configs === undefined) {
-            tfInfo.configs = {};
-        }
-        if (tfInfo.ranges === undefined) {
-            tfInfo.ranges = {};
-        }
-        tfInfo.path = {
+    if (this.freshStart) {
+        this.path = {
             module: configStartDir,
             root: configStartDir,
             cwd: configStartDir,
         };
-        tfInfo.terraform = {
+        this.terraform = {
             workspace: 'default',
         };
-        tfInfo.contextBuffer = null;
-        tfInfo.tfConfigCount = 0;
-        tfInfo.freshStart = false;
-        tfInfo.traverse = TerragruntParser.traverse;
-        tfInfo.tfInfo = tfInfo;
-        if (this.path === undefined) {
-            this.path = tfInfo.path;
-            this.terraform = tfInfo.terraform;
-            this.tfConfigCount = tfInfo.tfConfigCount;
-            this.contextBuffer = tfInfo.contextBuffer;
-        }
-    } else {
-        tfInfo.path = this.path;
-        tfInfo.terraform = this.terraform;
-        tfInfo.tfConfigCount = this.tfConfigCount;
-        tfInfo.contextBuffer = null;
-        tfInfo.configs = {};
-        tfInfo.ranges = {};
+        this.freshStart = false;
     }
-    tfInfo.tfConfigCount++;
+    this.contextBuffer = null;
+
+    tfInfo.path = this.path;
+    tfInfo.terraform = this.terraform;
+    tfInfo.configs = tfInfo.configs === undefined ? {} : tfInfo.configs;
+    tfInfo.ranges = tfInfo.ranges === undefined ? {} : tfInfo.ranges;
 
     const input = fs.readFileSync(filePath, 'utf8');
     const chars = new antlr4.InputStream(input);
@@ -84,10 +64,10 @@ function read_terragrunt_config(filePath, tfInfo = {}) {
     parser.buildParseTrees = true;
     const tree = parser.configFile();
 
-    if (tfInfo.printTree) {
+    if (this.printTree) {
         console.log(tree.toStringTree(parser.ruleNames));
     }
-    TerragruntParser.traverse(tfInfo, parser, tree, tfInfo.configs, tfInfo.ranges, null);
+    this.traverse(tfInfo, parser, tree, tfInfo.configs, tfInfo.ranges, null);
 
     return tfInfo.configs;
 }
@@ -119,12 +99,12 @@ const Terragrunt = {
 module.exports = Terragrunt;
 
 if (require.main === module) {
+    const Parser = require('./parser');
+
     let tfInfo = {
         freshStart: true,
-        configs: {},
-        ranges: {},
         printTree: false,
-        tfConfigCount: 0,
+        traverse: Parser.traverse,
     };
 
     try {
@@ -157,17 +137,14 @@ if (require.main === module) {
         // Read all the .tf files in the same directory
         let files = fs.readdirSync(baseDir);
         files.forEach((file) => {
-            if (file.endsWith('.tf') && file !== filePath) {
-                let tfFile = path.join(baseDir, file);
-                console.log('Reading config for ' + tfFile);
+            let tfFile = path.join(baseDir, file);
+            if (file.endsWith('.tf') && tfFile !== filePath) {
                 tfInfo.freshStart = true;
-                read_terragrunt_config(tfFile, tfInfo);
+                read_terragrunt_config.apply(tfInfo, [tfFile, tfInfo]);
             }
         });
         tfInfo.freshStart = true;
-        console.log('Reading config for ' + filePath);
-        read_terragrunt_config(filePath, tfInfo);
-        //tfInfo = TerragruntParser.evalExpression(`read_terragrunt_config("${filePath}", tfInfo); return tfInfo`, tfInfo);
+        read_terragrunt_config.apply(tfInfo, [filePath, tfInfo]);
         console.log(JSON.stringify(tfInfo.configs, null, 2));
         if (printRange) {
             console.log(JSON.stringify(tfInfo.ranges, null, 2));

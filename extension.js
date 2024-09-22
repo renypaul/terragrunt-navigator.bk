@@ -201,7 +201,8 @@ class TerragruntNav {
             }
 
             try {
-                let pattern = /\${(local|var|dependency)\.[^}]+}|(local|var|dependency)\.[a-zA-Z_][a-zA-Z0-9_.]*/g;
+                let pattern =
+                    /\${(local|var|dependency|module)\.[^}]+}|(local|var|dependency|module)\.[a-zA-Z_][a-zA-Z0-9_.]*/g;
                 let match = textLine.text.match(pattern);
                 if (!match) {
                     continue;
@@ -255,19 +256,25 @@ class TerragruntNav {
 
     updateConfigs() {
         try {
-            this.tfInfo.configs = {};
-            this.tfInfo.ranges = {};
+            this.tfInfo = {
+                freshStart: true,
+                printTree: false,
+                traverse: Parser.traverse,
+            };
             console.log('Reading config for ' + vscode.window.activeTextEditor.document.uri.fsPath);
             if (path.basename(vscode.window.activeTextEditor.document.uri.fsPath) === 'main.tf') {
                 let varFile = vscode.window.activeTextEditor.document.uri.fsPath.replace('main.tf', 'variables.tf');
                 if (fs.existsSync(varFile)) {
                     console.log('Reading variables for main.tf ' + varFile);
                     this.tfInfo.freshStart = true;
-                    Terragrunt.read_terragrunt_config(varFile, this.tfInfo);
+                    Terragrunt.read_terragrunt_config.apply(this.tfInfo, [varFile, this.tfInfo]);
                 }
             }
             this.tfInfo.freshStart = true;
-            Terragrunt.read_terragrunt_config(vscode.window.activeTextEditor.document.uri.fsPath, this.tfInfo);
+            Terragrunt.read_terragrunt_config.apply(this.tfInfo, [
+                vscode.window.activeTextEditor.document.uri.fsPath,
+                this.tfInfo,
+            ]);
         } catch (e) {
             console.log('Failed to read terragrunt config: ' + e);
         }
@@ -281,7 +288,7 @@ class TerragruntNav {
             let func = match[2].trim();
             let funcArgs = match[3].trim();
             if (func === 'find_in_parent_folders') {
-                srcPath = Terragrunt.find_in_parent_folders(funcArgs);
+                srcPath = Terragrunt.find_in_parent_folders.apply(this.tfInfo, [funcArgs]);
                 if (!srcPath) {
                     return null;
                 }
