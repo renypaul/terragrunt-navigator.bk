@@ -65,15 +65,18 @@
   },
   "dependencies": {
     "antlr4": "^4.13.2",
-    "jsep": "^1.3.9",
-    "npm-cli": "^0.1.0"
+    "jsep": "^1.3.9"
   },
   "description": "Navigate terragrunt/terrform code with Ctrl+click",
   "devDependencies": {
     "@babel/cli": "^7.24.8",
     "@babel/core": "^7.25.2",
     "@babel/preset-env": "^7.25.3",
-    "vscode": "^1.1.34",
+    "@types/vscode": "^1.64.0",
+    "@vscode/test-electron": "^2.0.0",
+    "mkdirp": "^1.0.4",
+    "mocha": "^9.2.2",
+    "rimraf": "^4.0.0",
     "webpack": "^5.64.4",
     "webpack-cli": "^4.10.0"
   },
@@ -88,7 +91,7 @@
   "publisher": "RenyPaul",
   "repository": {
     "type": "git",
-    "url": "https://github.com/renypaul/terragrunt-navigator.git"
+    "url": "https://github.com/HPInc/terragrunt-navigator.git"
   },
   "scripts": {
     "build:dev": "webpack --mode none",
@@ -96,5 +99,5 @@
     "compile": "java -jar /usr/local/lib/antlr-4.13.2-complete.jar -Dlanguage=JavaScript hclLexer.g4 hclParser.g4 -o generated -Xexact-output-dir -visitor && npx babel generated --out-dir generated-cjs",
     "test": "node ./parser.js tests/env/region/cluster/terragrunt.hcl"
   },
-  "version": "0.4.1"
+  "version": "0.6.0"
 }
